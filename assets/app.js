@@ -9,7 +9,7 @@ class TradingTester {
     async init() {
         const dbInitialized = await this.db.init();
         if (!dbInitialized) {
-            alert('Błąd inicjalizacji bazy danych!');
+            alert('Database initialization error!');
             return;
         }
 
@@ -117,7 +117,7 @@ class TradingTester {
         const select = document.getElementById('accountSelect');
         const lastAccountId = localStorage.getItem('lastSelectedAccountId');
 
-        select.innerHTML = '<option value="">Wybierz rachunek...</option>';
+        select.innerHTML = '<option value="">Select account...</option>';
 
         accounts.forEach(account => {
             const option = document.createElement('option');
@@ -126,7 +126,7 @@ class TradingTester {
             select.appendChild(option);
         });
 
-        // Automatycznie wybierz ostatnio używany rachunek
+        // Automatically select last used account
         if (lastAccountId && accounts.find(acc => acc.id == lastAccountId)) {
             select.value = lastAccountId;
             this.selectAccount(parseInt(lastAccountId));
@@ -150,9 +150,9 @@ class TradingTester {
         } catch (error) {
             console.error('Error creating account:', error);
             if (error.message && error.message.includes('UNIQUE constraint failed')) {
-                alert('Rachunek o tej nazwie już istnieje!');
+                alert('Account with this name already exists!');
             } else {
-                alert('Błąd podczas tworzenia rachunku!');
+                alert('Error creating account!');
             }
         }
     }
@@ -225,7 +225,7 @@ class TradingTester {
 
     addTransaction() {
         if (!this.currentAccount) {
-            alert('Wybierz rachunek!');
+            alert('Select an account!');
             return;
         }
 
@@ -290,9 +290,9 @@ class TradingTester {
             this.updateStatistics();
             this.loadAccounts();
 
-            alert('Transakcja dodana pomyślnie!');
+            alert('Transaction added successfully!');
         } catch (error) {
-            alert('Błąd podczas dodawania transakcji!');
+            alert('Error adding transaction!');
             console.error(error);
         }
     }
@@ -362,10 +362,10 @@ class TradingTester {
                 <td class="py-3 px-4">1:${transaction.rr_ratio.toFixed(2)}</td>
                 <td class="py-3 px-4 font-semibold ${pnlClass}">$${transaction.pnl.toFixed(2)}</td>
                 <td class="py-3 px-4">
-                    <button class="notes-btn ${notesClass} transition duration-200 mr-2" data-id="${transaction.id}" title="Notatki">
+                    <button class="notes-btn ${notesClass} transition duration-200 mr-2" data-id="${transaction.id}" title="Notes">
                         ${notesIcon}
                     </button>
-                    <button class="delete-transaction-btn text-slate-400 hover:text-danger transition duration-200" data-id="${transaction.id}" title="Usuń transakcję">
+                    <button class="delete-transaction-btn text-slate-400 hover:text-danger transition duration-200" data-id="${transaction.id}" title="Delete transaction">
                         ✕
                     </button>
                 </td>
@@ -397,8 +397,8 @@ class TradingTester {
         const strategiesList = document.getElementById('strategiesList');
         const filterSelect = document.getElementById('filterStrategy');
 
-        select.innerHTML = '<option value="">Wybierz strategię...</option>';
-        filterSelect.innerHTML = '<option value="">Wszystkie strategie</option>';
+        select.innerHTML = '<option value="">Select strategy...</option>';
+        filterSelect.innerHTML = '<option value="">All strategies</option>';
         strategiesList.innerHTML = '';
 
         strategies.forEach(strategy => {
@@ -416,7 +416,7 @@ class TradingTester {
             strategyItem.className = 'flex justify-between items-center p-3 bg-slate-700 rounded-lg border border-slate-600';
             strategyItem.innerHTML = `
                 <span class="font-medium text-slate-100">${strategy.name}</span>
-                <button class="delete-strategy-btn px-3 py-1 bg-danger hover:bg-red-600 text-white text-sm rounded transition duration-200" data-id="${strategy.id}">Usuń</button>
+                <button class="delete-strategy-btn px-3 py-1 bg-danger hover:bg-red-600 text-white text-sm rounded transition duration-200" data-id="${strategy.id}">Delete</button>
             `;
             strategiesList.appendChild(strategyItem);
         });
@@ -437,8 +437,8 @@ class TradingTester {
         const instrumentsList = document.getElementById('instrumentsList');
         const filterSelect = document.getElementById('filterInstrument');
 
-        select.innerHTML = '<option value="">Wybierz instrument...</option>';
-        filterSelect.innerHTML = '<option value="">Wszystkie instrumenty</option>';
+        select.innerHTML = '<option value="">Select instrument...</option>';
+        filterSelect.innerHTML = '<option value="">All instruments</option>';
         instrumentsList.innerHTML = '';
 
         instruments.forEach(instrument => {
@@ -456,7 +456,7 @@ class TradingTester {
             instrumentItem.className = 'flex justify-between items-center p-3 bg-slate-700 rounded-lg border border-slate-600';
             instrumentItem.innerHTML = `
                 <span class="font-medium text-slate-100">${instrument.name}</span>
-                <button class="delete-instrument-btn px-3 py-1 bg-danger hover:bg-red-600 text-white text-sm rounded transition duration-200" data-id="${instrument.id}">Usuń</button>
+                <button class="delete-instrument-btn px-3 py-1 bg-danger hover:bg-red-600 text-white text-sm rounded transition duration-200" data-id="${instrument.id}">Delete</button>
             `;
             instrumentsList.appendChild(instrumentItem);
         });
@@ -471,13 +471,13 @@ class TradingTester {
 
     addStrategy() {
         if (!this.currentAccount) {
-            alert('Wybierz rachunek!');
+            alert('Select an account!');
             return;
         }
 
         const name = document.getElementById('newStrategyName').value.trim();
         if (!name) {
-            alert('Wprowadź nazwę strategii!');
+            alert('Enter strategy name!');
             return;
         }
 
@@ -489,35 +489,35 @@ class TradingTester {
         } catch (error) {
             console.error('Error adding strategy:', error);
             if (error.message && error.message.includes('UNIQUE constraint failed')) {
-                alert('Strategia o tej nazwie już istnieje!');
+                alert('Strategy with this name already exists!');
             } else {
-                alert('Błąd podczas dodawania strategii!');
+                alert('Error adding strategy!');
             }
         }
     }
 
     deleteStrategy(strategyId) {
-        if (confirm('Czy na pewno chcesz usunąć tę strategię?')) {
+        if (confirm('Are you sure you want to delete this strategy?')) {
             try {
                 this.db.deleteStrategy(strategyId);
                 this.loadStrategies();
                 this.updateStatistics();
             } catch (error) {
                 console.error('Error deleting strategy:', error);
-                alert('Błąd podczas usuwania strategii!');
+                alert('Error deleting strategy!');
             }
         }
     }
 
     addInstrument() {
         if (!this.currentAccount) {
-            alert('Wybierz rachunek!');
+            alert('Select an account!');
             return;
         }
 
         const name = document.getElementById('newInstrumentName').value.trim();
         if (!name) {
-            alert('Wprowadź nazwę instrumentu!');
+            alert('Enter instrument name!');
             return;
         }
 
@@ -528,31 +528,31 @@ class TradingTester {
         } catch (error) {
             console.error('Error adding instrument:', error);
             if (error.message && error.message.includes('UNIQUE constraint failed')) {
-                alert('Instrument o tej nazwie już istnieje!');
+                alert('Instrument with this name already exists!');
             } else {
-                alert('Błąd podczas dodawania instrumentu!');
+                alert('Error adding instrument!');
             }
         }
     }
 
     deleteInstrument(instrumentId) {
-        if (confirm('Czy na pewno chcesz usunąć ten instrument?')) {
+        if (confirm('Are you sure you want to delete this instrument?')) {
             try {
                 this.db.deleteInstrument(instrumentId);
                 this.loadInstruments();
             } catch (error) {
                 console.error('Error deleting instrument:', error);
-                alert('Błąd podczas usuwania instrumentu!');
+                alert('Error deleting instrument!');
             }
         }
     }
 
     deleteTransaction(transactionId) {
-        if (confirm('Czy na pewno chcesz usunąć tę transakcję?')) {
+        if (confirm('Are you sure you want to delete this transaction?')) {
             try {
                 const transaction = this.db.getTransaction(transactionId);
                 if (!transaction) {
-                    alert('Transakcja nie została znaleziona!');
+                    alert('Transaction not found!');
                     return;
                 }
 
@@ -568,13 +568,13 @@ class TradingTester {
                 this.loadAccountsList();
             } catch (error) {
                 console.error('Error deleting transaction:', error);
-                alert('Błąd podczas usuwania transakcji!');
+                alert('Error deleting transaction!');
             }
         }
     }
 
     deleteAccount(accountId) {
-        if (confirm('Czy na pewno chcesz usunąć ten rachunek? Wszystkie transakcje i strategie zostaną usunięte!')) {
+        if (confirm('Are you sure you want to delete this account? All transactions and strategies will be deleted!')) {
             try {
                 this.db.deleteAccount(accountId);
 
@@ -591,7 +591,7 @@ class TradingTester {
                 this.loadAccountsList();
             } catch (error) {
                 console.error('Error deleting account:', error);
-                alert('Błąd podczas usuwania rachunku!');
+                alert('Error deleting account!');
             }
         }
     }
@@ -613,17 +613,17 @@ class TradingTester {
                 <div class="flex justify-between items-center mb-2">
                     <div class="flex items-center gap-3">
                         <span class="font-bold text-lg text-slate-100">${account.name}</span>
-                        <span class="text-sm text-slate-400">Dźwignia: ${account.leverage}x</span>
+                        <span class="text-sm text-slate-400">Leverage: ${account.leverage}x</span>
                     </div>
-                    <button class="delete-account-btn px-3 py-1 bg-danger hover:bg-red-600 text-white text-sm rounded transition duration-200" data-id="${account.id}">Usuń</button>
+                    <button class="delete-account-btn px-3 py-1 bg-danger hover:bg-red-600 text-white text-sm rounded transition duration-200" data-id="${account.id}">Delete</button>
                 </div>
                 <div class="flex gap-4 text-sm">
                     <div>
-                        <span class="text-slate-400">Początkowe: </span>
+                        <span class="text-slate-400">Initial: </span>
                         <span class="text-slate-100">$${account.initial_balance.toFixed(2)}</span>
                     </div>
                     <div>
-                        <span class="text-slate-400">Obecne: </span>
+                        <span class="text-slate-400">Current: </span>
                         <span class="text-slate-100">$${account.current_balance.toFixed(2)}</span>
                     </div>
                     <div>
@@ -671,7 +671,7 @@ class TradingTester {
                         <span class="font-semibold text-slate-100">${stats.win_rate.toFixed(1)}%</span>
                     </div>
                     <div class="flex justify-between py-2 border-b border-slate-700">
-                        <span class="text-slate-400">Łączny P&L</span>
+                        <span class="text-slate-400">Total P&L</span>
                         <span class="font-semibold ${stats.total_pnl >= 0 ? 'text-success' : 'text-danger'}">$${stats.total_pnl.toFixed(2)}</span>
                     </div>
                     <div class="flex justify-between py-2 border-b border-slate-700">
@@ -699,7 +699,7 @@ class TradingTester {
     openNotesModal(transactionId) {
         const transaction = this.db.getTransaction(transactionId);
         if (!transaction) {
-            alert('Transakcja nie została znaleziona!');
+            alert('Transaction not found!');
             return;
         }
 
@@ -725,7 +725,7 @@ class TradingTester {
             this.loadTransactionHistory();
         } catch (error) {
             console.error('Error saving notes:', error);
-            alert('Błąd podczas zapisywania notatek!');
+            alert('Error saving notes!');
         }
     }
 
@@ -742,7 +742,7 @@ class TradingTester {
             URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Error exporting backup:', error);
-            alert('Błąd podczas tworzenia backupu!');
+            alert('Error creating backup!');
         }
     }
 
@@ -750,7 +750,7 @@ class TradingTester {
         const file = event.target.files[0];
         if (!file) return;
 
-        if (!confirm('Czy na pewno chcesz wczytać backup? Wszystkie obecne dane zostaną zastąpione!')) {
+        if (!confirm('Are you sure you want to load the backup? All current data will be replaced!')) {
             event.target.value = '';
             return;
         }
@@ -763,11 +763,11 @@ class TradingTester {
             localStorage.setItem('trading_tester_db', JSON.stringify(Array.from(data)));
 
             // Reload page to reinitialize with new database
-            alert('Backup wczytany pomyślnie! Strona zostanie odświeżona.');
+            alert('Backup loaded successfully! The page will be refreshed.');
             location.reload();
         } catch (error) {
             console.error('Error importing backup:', error);
-            alert('Błąd podczas wczytywania backupu!');
+            alert('Error loading backup!');
             event.target.value = '';
         }
     }

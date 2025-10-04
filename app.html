@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,18 +26,18 @@
     <div id="notesModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
         <div class="bg-slate-800 rounded-xl p-8 w-full max-w-2xl border border-slate-700 shadow-2xl">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-slate-100">Notatki transakcji</h2>
+                <h2 class="text-2xl font-bold text-slate-100">Transaction Notes</h2>
                 <button id="closeNotesModal" class="text-slate-400 hover:text-slate-100 text-3xl leading-none">&times;</button>
             </div>
             <textarea id="transactionNotes" rows="10"
                 class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100 resize-none"
-                placeholder="Wpisz notatki dotyczące tej transakcji..."></textarea>
+                placeholder="Enter notes about this transaction..."></textarea>
             <div class="flex gap-3 mt-4">
                 <button id="saveNotesBtn" class="flex-1 bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
-                    Zapisz
+                    Save
                 </button>
                 <button id="cancelNotesBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition duration-200">
-                    Anuluj
+                    Cancel
                 </button>
             </div>
         </div>
@@ -47,27 +47,27 @@
     <div id="accountModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
         <div class="bg-slate-800 rounded-xl p-8 w-full max-w-md border border-slate-700 shadow-2xl">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-slate-100">Nowy rachunek</h2>
+                <h2 class="text-2xl font-bold text-slate-100">New Account</h2>
                 <button class="close text-slate-400 hover:text-slate-100 text-3xl leading-none">&times;</button>
             </div>
             <form id="accountForm" class="space-y-4">
                 <div>
-                    <label for="accountName" class="block text-sm font-medium text-slate-300 mb-2">Nazwa rachunku</label>
+                    <label for="accountName" class="block text-sm font-medium text-slate-300 mb-2">Account Name</label>
                     <input type="text" id="accountName" required
                         class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
                 </div>
                 <div>
-                    <label for="initialBalance" class="block text-sm font-medium text-slate-300 mb-2">Saldo początkowe ($)</label>
+                    <label for="initialBalance" class="block text-sm font-medium text-slate-300 mb-2">Initial Balance ($)</label>
                     <input type="number" id="initialBalance" step="0.01" required
                         class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
                 </div>
                 <div>
-                    <label for="leverage" class="block text-sm font-medium text-slate-300 mb-2">Dźwignia</label>
+                    <label for="leverage" class="block text-sm font-medium text-slate-300 mb-2">Leverage</label>
                     <input type="number" id="leverage" value="100" required
                         class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
                 </div>
                 <button type="submit" class="w-full bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
-                    Utwórz rachunek
+                    Create Account
                 </button>
             </form>
         </div>
@@ -83,7 +83,7 @@
                     <h1 class="text-2xl font-bold text-slate-100">Trading Tester</h1>
                     <div class="flex items-center gap-3">
                         <select id="accountSelect" class="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-primary outline-none">
-                            <option value="">Wybierz rachunek...</option>
+                            <option value="">Select account...</option>
                         </select>
                     </div>
                 </div>
@@ -93,11 +93,11 @@
                     <h2 class="text-2xl font-bold text-slate-100 mb-6">Dashboard</h2>
                     <div class="grid grid-cols-4 gap-6">
                         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                            <h3 class="text-sm font-medium text-slate-400 mb-2">Obecne saldo</h3>
+                            <h3 class="text-sm font-medium text-slate-400 mb-2">Current Balance</h3>
                             <p id="currentBalance" class="text-3xl font-bold text-slate-100">$0.00</p>
                         </div>
                         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                            <h3 class="text-sm font-medium text-slate-400 mb-2">Łączny P&L</h3>
+                            <h3 class="text-sm font-medium text-slate-400 mb-2">Total P&L</h3>
                             <p id="totalPnL" class="text-3xl font-bold">$0.00</p>
                         </div>
                         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
@@ -105,7 +105,7 @@
                             <p id="netROI" class="text-3xl font-bold">0%</p>
                         </div>
                         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                            <h3 class="text-sm font-medium text-slate-400 mb-2">Liczba transakcji</h3>
+                            <h3 class="text-sm font-medium text-slate-400 mb-2">Total Trades</h3>
                             <p id="totalTransactions" class="text-3xl font-bold text-slate-100">0</p>
                         </div>
                     </div>
@@ -113,11 +113,11 @@
 
                 <!-- Add Transaction Section -->
                 <section id="addTransaction" class="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                    <h2 class="text-2xl font-bold text-slate-100 mb-6">Dodaj transakcję</h2>
+                    <h2 class="text-2xl font-bold text-slate-100 mb-6">Add Transaction</h2>
                     <form id="addTransactionForm">
                         <div class="grid grid-cols-2 gap-6 mb-6">
                             <div>
-                                <label for="transactionDate" class="block text-sm font-medium text-slate-300 mb-2">Data transakcji</label>
+                                <label for="transactionDate" class="block text-sm font-medium text-slate-300 mb-2">Transaction Date</label>
                                 <input type="date" id="transactionDate" required
                                     class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
                             </div>
@@ -125,27 +125,27 @@
                                 <label for="instrument" class="block text-sm font-medium text-slate-300 mb-2">Instrument</label>
                                 <select id="instrument" required
                                     class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
-                                    <option value="">Wybierz instrument...</option>
+                                    <option value="">Select instrument...</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="strategy" class="block text-sm font-medium text-slate-300 mb-2">Strategia</label>
+                                <label for="strategy" class="block text-sm font-medium text-slate-300 mb-2">Strategy</label>
                                 <select id="strategy" required
                                     class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
-                                    <option value="">Wybierz strategię...</option>
+                                    <option value="">Select strategy...</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="direction" class="block text-sm font-medium text-slate-300 mb-2">Kierunek</label>
+                                <label for="direction" class="block text-sm font-medium text-slate-300 mb-2">Direction</label>
                                 <select id="direction" required
                                     class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
-                                    <option value="">Wybierz kierunek...</option>
+                                    <option value="">Select direction...</option>
                                     <option value="LONG">LONG</option>
                                     <option value="SHORT">SHORT</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="entryPrice" class="block text-sm font-medium text-slate-300 mb-2">Cena wejścia</label>
+                                <label for="entryPrice" class="block text-sm font-medium text-slate-300 mb-2">Entry Price</label>
                                 <input type="number" id="entryPrice" step="0.00001" required
                                     class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
                             </div>
@@ -155,12 +155,12 @@
                                     class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
                             </div>
                             <div>
-                                <label for="riskPercent" class="block text-sm font-medium text-slate-300 mb-2">Ryzyko (%)</label>
+                                <label for="riskPercent" class="block text-sm font-medium text-slate-300 mb-2">Risk (%)</label>
                                 <input type="number" id="riskPercent" step="0.1" min="0.1" max="100" value="1" required
                                     class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
                             </div>
                             <div>
-                                <label for="exitPrice" class="block text-sm font-medium text-slate-300 mb-2">Cena zamknięcia</label>
+                                <label for="exitPrice" class="block text-sm font-medium text-slate-300 mb-2">Exit Price</label>
                                 <input type="number" id="exitPrice" step="0.00001" required
                                     class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
                             </div>
@@ -169,11 +169,11 @@
                         <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-4 mb-6">
                             <div class="grid grid-cols-4 gap-4">
                                 <div>
-                                    <p class="text-xs text-slate-400 mb-1">Wielkość pozycji</p>
+                                    <p class="text-xs text-slate-400 mb-1">Position Size</p>
                                     <p id="positionSize" class="text-lg font-bold text-slate-100">$0.00</p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-slate-400 mb-1">Ryzyko ($)</p>
+                                    <p class="text-xs text-slate-400 mb-1">Risk ($)</p>
                                     <p id="riskAmount" class="text-lg font-bold text-slate-100">$0.00</p>
                                 </div>
                                 <div>
@@ -181,14 +181,14 @@
                                     <p id="rrRatio" class="text-lg font-bold text-slate-100">0:0</p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-slate-400 mb-1">Potencjalny P&L</p>
+                                    <p class="text-xs text-slate-400 mb-1">Potential P&L</p>
                                     <p id="potentialPnL" class="text-lg font-bold text-slate-100">$0.00</p>
                                 </div>
                             </div>
                         </div>
 
                         <button type="submit" class="w-full bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
-                            Dodaj transakcję
+                            Add Transaction
                         </button>
                     </form>
                 </section>
@@ -196,13 +196,13 @@
                 <!-- Transaction History Section -->
                 <section id="history" class="bg-slate-800 border border-slate-700 rounded-xl p-6">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-bold text-slate-100">Historia transakcji</h2>
+                        <h2 class="text-2xl font-bold text-slate-100">Transaction History</h2>
                         <div class="flex gap-3">
                             <select id="filterStrategy" class="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-primary outline-none">
-                                <option value="">Wszystkie strategie</option>
+                                <option value="">All strategies</option>
                             </select>
                             <select id="filterInstrument" class="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-primary outline-none">
-                                <option value="">Wszystkie instrumenty</option>
+                                <option value="">All instruments</option>
                             </select>
                         </div>
                     </div>
@@ -210,15 +210,15 @@
                         <table class="w-full">
                             <thead>
                                 <tr class="border-b border-slate-700">
-                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Data</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Date</th>
                                     <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Instrument</th>
-                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Strategia</th>
-                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Kierunek</th>
-                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Wejście</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Strategy</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Direction</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Entry</th>
                                     <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Stop Loss</th>
-                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Zamknięcie</th>
-                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Ryzyko %</th>
-                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Ryzyko $</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Exit</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Risk %</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Risk $</th>
                                     <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">R/R Ratio</th>
                                     <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">P&L</th>
                                     <th class="text-left py-3 px-4 text-sm font-medium text-slate-400"></th>
@@ -232,54 +232,54 @@
 
                 <!-- Statistics Section -->
                 <section id="statistics" class="space-y-6">
-                    <h2 class="text-2xl font-bold text-slate-100">Statystyki</h2>
+                    <h2 class="text-2xl font-bold text-slate-100">Statistics</h2>
 
                     <div id="strategyStatsContainer" class="grid grid-cols-3 gap-6"></div>
 
                     <div class="grid gap-6" style="grid-template-columns: 1fr 1fr 1fr 0.5fr;">
                         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                            <h3 class="text-lg font-bold text-slate-100 mb-4">Zarządzaj strategiami</h3>
+                            <h3 class="text-lg font-bold text-slate-100 mb-4">Manage Strategies</h3>
                             <div class="flex gap-3 mb-4">
-                                <input type="text" id="newStrategyName" placeholder="Nazwa strategii..."
+                                <input type="text" id="newStrategyName" placeholder="Strategy name..."
                                     class="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
                                 <button id="addStrategyBtn" class="px-6 py-2 bg-primary hover:bg-blue-600 text-white font-medium rounded-lg transition duration-200">
-                                    Dodaj
+                                    Add
                                 </button>
                             </div>
                             <div id="strategiesList" class="space-y-2"></div>
                         </div>
 
                         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                            <h3 class="text-lg font-bold text-slate-100 mb-4">Zarządzaj instrumentami</h3>
+                            <h3 class="text-lg font-bold text-slate-100 mb-4">Manage Instruments</h3>
                             <div class="flex gap-3 mb-4">
-                                <input type="text" id="newInstrumentName" placeholder="Nazwa instrumentu..."
+                                <input type="text" id="newInstrumentName" placeholder="Instrument name..."
                                     class="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
                                 <button id="addInstrumentBtn" class="px-6 py-2 bg-primary hover:bg-blue-600 text-white font-medium rounded-lg transition duration-200">
-                                    Dodaj
+                                    Add
                                 </button>
                             </div>
                             <div id="instrumentsList" class="space-y-2"></div>
                         </div>
 
                         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                            <h3 class="text-lg font-bold text-slate-100 mb-4">Zarządzaj rachunkami</h3>
+                            <h3 class="text-lg font-bold text-slate-100 mb-4">Manage Accounts</h3>
                             <div id="accountsList" class="space-y-2 mb-4"></div>
                             <button id="addAccountBtn" class="w-full px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition duration-200">
-                                + Dodaj rachunek
+                                + Add Account
                             </button>
                         </div>
 
                         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
                             <div class="flex items-center gap-2 mb-4">
-                                <h3 class="text-lg font-bold text-slate-100">Backup danych</h3>
-                                <span class="text-slate-400 cursor-help text-lg" title="⚠️ Dane są przechowywane w przeglądarce. Czyszczenie cookies/danych strony USUWA wszystkie transakcje! Regularnie zapisuj backup do pliku aby zabezpieczyć dane.">❓</span>
+                                <h3 class="text-lg font-bold text-slate-100">Data Backup</h3>
+                                <span class="text-slate-400 cursor-help text-lg" title="⚠️ Data is stored in browser. Clearing cookies/site data DELETES all transactions! Regularly save backup to file to protect your data.">❓</span>
                             </div>
                             <div class="space-y-3">
                                 <button id="exportBackupBtn" class="w-full px-4 py-2 bg-success hover:bg-green-600 text-white text-sm font-medium rounded-lg transition duration-200">
-                                    💾 Zapisz backup
+                                    💾 Save Backup
                                 </button>
                                 <label for="importBackupInput" class="block w-full px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition duration-200 text-center cursor-pointer">
-                                    📂 Wczytaj backup
+                                    📂 Load Backup
                                 </label>
                                 <input type="file" id="importBackupInput" accept=".db,.json" class="hidden">
                             </div>
