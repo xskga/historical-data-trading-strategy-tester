@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤑</text></svg>">
+    <title>Trading Strategy Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        success: '#10b981',
+                        danger: '#ef4444',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+    <!-- Notes Modal -->
+    <div id="notesModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-slate-800 rounded-xl p-8 w-full max-w-2xl border border-slate-700 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-100">Notatki transakcji</h2>
+                <button id="closeNotesModal" class="text-slate-400 hover:text-slate-100 text-3xl leading-none">&times;</button>
+            </div>
+            <textarea id="transactionNotes" rows="10"
+                class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100 resize-none"
+                placeholder="Wpisz notatki dotyczące tej transakcji..."></textarea>
+            <div class="flex gap-3 mt-4">
+                <button id="saveNotesBtn" class="flex-1 bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                    Zapisz
+                </button>
+                <button id="cancelNotesBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                    Anuluj
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Modal -->
+    <div id="accountModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-slate-800 rounded-xl p-8 w-full max-w-md border border-slate-700 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-100">Nowy rachunek</h2>
+                <button class="close text-slate-400 hover:text-slate-100 text-3xl leading-none">&times;</button>
+            </div>
+            <form id="accountForm" class="space-y-4">
+                <div>
+                    <label for="accountName" class="block text-sm font-medium text-slate-300 mb-2">Nazwa rachunku</label>
+                    <input type="text" id="accountName" required
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                </div>
+                <div>
+                    <label for="initialBalance" class="block text-sm font-medium text-slate-300 mb-2">Saldo początkowe ($)</label>
+                    <input type="number" id="initialBalance" step="0.01" required
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                </div>
+                <div>
+                    <label for="leverage" class="block text-sm font-medium text-slate-300 mb-2">Dźwignia</label>
+                    <input type="number" id="leverage" value="100" required
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                </div>
+                <button type="submit" class="w-full bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                    Utwórz rachunek
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="min-h-screen">
+        <!-- Main Content -->
+        <main class="overflow-y-auto">
+            <div class="max-w-7xl mx-auto p-8 space-y-8">
+
+                <!-- Top Bar with Account Selection -->
+                <div class="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl p-4">
+                    <h1 class="text-2xl font-bold text-slate-100">Trading Tester</h1>
+                    <div class="flex items-center gap-3">
+                        <select id="accountSelect" class="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-primary outline-none">
+                            <option value="">Wybierz rachunek...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Dashboard Section -->
+                <section id="dashboard">
+                    <h2 class="text-2xl font-bold text-slate-100 mb-6">Dashboard</h2>
+                    <div class="grid grid-cols-4 gap-6">
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-sm font-medium text-slate-400 mb-2">Obecne saldo</h3>
+                            <p id="currentBalance" class="text-3xl font-bold text-slate-100">$0.00</p>
+                        </div>
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-sm font-medium text-slate-400 mb-2">Łączny P&L</h3>
+                            <p id="totalPnL" class="text-3xl font-bold">$0.00</p>
+                        </div>
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-sm font-medium text-slate-400 mb-2">Net ROI</h3>
+                            <p id="netROI" class="text-3xl font-bold">0%</p>
+                        </div>
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-sm font-medium text-slate-400 mb-2">Liczba transakcji</h3>
+                            <p id="totalTransactions" class="text-3xl font-bold text-slate-100">0</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Add Transaction Section -->
+                <section id="addTransaction" class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                    <h2 class="text-2xl font-bold text-slate-100 mb-6">Dodaj transakcję</h2>
+                    <form id="addTransactionForm">
+                        <div class="grid grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label for="transactionDate" class="block text-sm font-medium text-slate-300 mb-2">Data transakcji</label>
+                                <input type="date" id="transactionDate" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                            </div>
+                            <div>
+                                <label for="instrument" class="block text-sm font-medium text-slate-300 mb-2">Instrument</label>
+                                <select id="instrument" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                    <option value="">Wybierz instrument...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="strategy" class="block text-sm font-medium text-slate-300 mb-2">Strategia</label>
+                                <select id="strategy" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                    <option value="">Wybierz strategię...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="direction" class="block text-sm font-medium text-slate-300 mb-2">Kierunek</label>
+                                <select id="direction" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                    <option value="">Wybierz kierunek...</option>
+                                    <option value="LONG">LONG</option>
+                                    <option value="SHORT">SHORT</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="entryPrice" class="block text-sm font-medium text-slate-300 mb-2">Cena wejścia</label>
+                                <input type="number" id="entryPrice" step="0.00001" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                            </div>
+                            <div>
+                                <label for="stopLoss" class="block text-sm font-medium text-slate-300 mb-2">Stop Loss</label>
+                                <input type="number" id="stopLoss" step="0.00001" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                            </div>
+                            <div>
+                                <label for="riskPercent" class="block text-sm font-medium text-slate-300 mb-2">Ryzyko (%)</label>
+                                <input type="number" id="riskPercent" step="0.1" min="0.1" max="100" value="1" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                            </div>
+                            <div>
+                                <label for="exitPrice" class="block text-sm font-medium text-slate-300 mb-2">Cena zamknięcia</label>
+                                <input type="number" id="exitPrice" step="0.00001" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-4 mb-6">
+                            <div class="grid grid-cols-4 gap-4">
+                                <div>
+                                    <p class="text-xs text-slate-400 mb-1">Wielkość pozycji</p>
+                                    <p id="positionSize" class="text-lg font-bold text-slate-100">$0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 mb-1">Ryzyko ($)</p>
+                                    <p id="riskAmount" class="text-lg font-bold text-slate-100">$0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 mb-1">Risk/Reward Ratio</p>
+                                    <p id="rrRatio" class="text-lg font-bold text-slate-100">0:0</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 mb-1">Potencjalny P&L</p>
+                                    <p id="potentialPnL" class="text-lg font-bold text-slate-100">$0.00</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                            Dodaj transakcję
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Transaction History Section -->
+                <section id="history" class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-slate-100">Historia transakcji</h2>
+                        <div class="flex gap-3">
+                            <select id="filterStrategy" class="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-primary outline-none">
+                                <option value="">Wszystkie strategie</option>
+                            </select>
+                            <select id="filterInstrument" class="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-primary outline-none">
+                                <option value="">Wszystkie instrumenty</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-slate-700">
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Data</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Instrument</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Strategia</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Kierunek</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Wejście</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Stop Loss</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Zamknięcie</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Ryzyko %</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Ryzyko $</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">R/R Ratio</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">P&L</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionTableBody" class="text-slate-300">
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Statistics Section -->
+                <section id="statistics" class="space-y-6">
+                    <h2 class="text-2xl font-bold text-slate-100">Statystyki</h2>
+
+                    <div id="strategyStatsContainer" class="grid grid-cols-3 gap-6"></div>
+
+                    <div class="grid gap-6" style="grid-template-columns: 1fr 1fr 1fr 0.5fr;">
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-lg font-bold text-slate-100 mb-4">Zarządzaj strategiami</h3>
+                            <div class="flex gap-3 mb-4">
+                                <input type="text" id="newStrategyName" placeholder="Nazwa strategii..."
+                                    class="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                <button id="addStrategyBtn" class="px-6 py-2 bg-primary hover:bg-blue-600 text-white font-medium rounded-lg transition duration-200">
+                                    Dodaj
+                                </button>
+                            </div>
+                            <div id="strategiesList" class="space-y-2"></div>
+                        </div>
+
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-lg font-bold text-slate-100 mb-4">Zarządzaj instrumentami</h3>
+                            <div class="flex gap-3 mb-4">
+                                <input type="text" id="newInstrumentName" placeholder="Nazwa instrumentu..."
+                                    class="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                <button id="addInstrumentBtn" class="px-6 py-2 bg-primary hover:bg-blue-600 text-white font-medium rounded-lg transition duration-200">
+                                    Dodaj
+                                </button>
+                            </div>
+                            <div id="instrumentsList" class="space-y-2"></div>
+                        </div>
+
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-lg font-bold text-slate-100 mb-4">Zarządzaj rachunkami</h3>
+                            <div id="accountsList" class="space-y-2 mb-4"></div>
+                            <button id="addAccountBtn" class="w-full px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition duration-200">
+                                + Dodaj rachunek
+                            </button>
+                        </div>
+
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <div class="flex items-center gap-2 mb-4">
+                                <h3 class="text-lg font-bold text-slate-100">Backup danych</h3>
+                                <span class="text-slate-400 cursor-help text-lg" title="⚠️ Dane są przechowywane w przeglądarce. Czyszczenie cookies/danych strony USUWA wszystkie transakcje! Regularnie zapisuj backup do pliku aby zabezpieczyć dane.">❓</span>
+                            </div>
+                            <div class="space-y-3">
+                                <button id="exportBackupBtn" class="w-full px-4 py-2 bg-success hover:bg-green-600 text-white text-sm font-medium rounded-lg transition duration-200">
+                                    💾 Zapisz backup
+                                </button>
+                                <label for="importBackupInput" class="block w-full px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition duration-200 text-center cursor-pointer">
+                                    📂 Wczytaj backup
+                                </label>
+                                <input type="file" id="importBackupInput" accept=".db,.json" class="hidden">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <script src="assets/database.js"></script>
+    <script src="assets/app.js"></script>
+</body>
+</html>
