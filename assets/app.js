@@ -3,6 +3,7 @@ class TradingTester {
         this.db = new Database();
         this.currentAccount = null;
         this.currentTransactionId = null;
+        this.currentTagDefinitionId = null;
         this.init();
     }
 
@@ -61,19 +62,6 @@ class TradingTester {
             this.addInstrument();
         });
 
-        // Notes modal handlers
-        document.getElementById('closeNotesModal').addEventListener('click', () => {
-            this.closeNotesModal();
-        });
-
-        document.getElementById('cancelNotesBtn').addEventListener('click', () => {
-            this.closeNotesModal();
-        });
-
-        document.getElementById('saveNotesBtn').addEventListener('click', () => {
-            this.saveNotes();
-        });
-
         // Filter handlers
         document.getElementById('filterStrategy').addEventListener('change', () => {
             this.loadTransactionHistory();
@@ -90,6 +78,45 @@ class TradingTester {
 
         document.getElementById('importBackupInput').addEventListener('change', (e) => {
             this.importBackup(e);
+        });
+
+        // Tag management handlers
+        document.getElementById('addTagBtn').addEventListener('click', () => {
+            this.addTag();
+        });
+
+        document.getElementById('closeTagFieldModal').addEventListener('click', () => {
+            this.closeTagFieldModal();
+        });
+
+        document.getElementById('cancelTagFieldBtn').addEventListener('click', () => {
+            this.closeTagFieldModal();
+        });
+
+        document.getElementById('tagFieldForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.addTagField();
+        });
+
+        document.getElementById('fieldType').addEventListener('change', (e) => {
+            const optionsContainer = document.getElementById('fieldOptionsContainer');
+            if (e.target.value === 'select' || e.target.value === 'checkbox') {
+                optionsContainer.classList.remove('hidden');
+            } else {
+                optionsContainer.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('closeTransactionEditModal').addEventListener('click', () => {
+            this.closeTransactionEditModal();
+        });
+
+        document.getElementById('cancelTransactionEditBtn').addEventListener('click', () => {
+            this.closeTransactionEditModal();
+        });
+
+        document.getElementById('saveTransactionEditBtn').addEventListener('click', () => {
+            this.saveTransactionEdit();
         });
 
         // Real-time calculation
@@ -163,6 +190,8 @@ class TradingTester {
             localStorage.setItem('lastSelectedAccountId', accountId);
             this.loadStrategies();
             this.loadInstruments();
+            this.loadTags();
+            this.renderTransactionTagsForm();
             this.updateDashboard();
             this.loadTransactionHistory();
             this.updateStatistics();
@@ -237,6 +266,7 @@ class TradingTester {
         const stopLoss = parseFloat(document.getElementById('stopLoss').value);
         const exitPrice = parseFloat(document.getElementById('exitPrice').value);
         const riskPercent = parseFloat(document.getElementById('riskPercent').value);
+        const quickNotes = document.getElementById('transactionQuickNotes').value.trim();
 
         const riskAmount = (this.currentAccount.current_balance * riskPercent) / 100;
         const priceDifference = Math.abs(entryPrice - stopLoss);
@@ -257,7 +287,7 @@ class TradingTester {
         const roi = this.currentAccount.initial_balance > 0 ? (pnl / this.currentAccount.initial_balance) * 100 : 0;
 
         try {
-            this.db.addTransaction(
+            const transactionId = this.db.addTransaction(
                 this.currentAccount.id,
                 instrument,
                 strategy,
@@ -274,6 +304,17 @@ class TradingTester {
                 transactionDate
             );
 
+            // Save quick notes if provided
+            if (quickNotes) {
+                this.db.updateTransactionNotes(transactionId, quickNotes);
+            }
+
+            // Collect and save transaction tags
+            const tagsData = this.collectTransactionTagsData();
+            if (tagsData.length > 0) {
+                this.saveTransactionTags(transactionId, tagsData);
+            }
+
             const newBalance = this.currentAccount.current_balance + pnl;
             this.db.updateAccountBalance(this.currentAccount.id, newBalance);
             this.currentAccount.current_balance = newBalance;
@@ -284,6 +325,9 @@ class TradingTester {
             document.getElementById('rrRatio').textContent = '0:0';
             document.getElementById('potentialPnL').textContent = '$0.00';
             document.getElementById('potentialPnL').className = 'text-lg font-bold text-slate-100';
+
+            // Reset tags form
+            this.renderTransactionTagsForm();
 
             this.updateDashboard();
             this.loadTransactionHistory();
@@ -344,9 +388,6 @@ class TradingTester {
             const date = transaction.created_at;
 
             const pnlClass = transaction.pnl >= 0 ? 'text-success' : 'text-danger';
-            const hasNotes = transaction.notes && transaction.notes.trim().length > 0;
-            const notesIcon = hasNotes ? '✏️' : '📄';
-            const notesClass = hasNotes ? 'hover:text-slate-300' : 'hover:text-slate-400';
 
             row.className = 'border-b border-slate-700 hover:bg-slate-700/50';
             row.innerHTML = `
@@ -362,8 +403,8 @@ class TradingTester {
                 <td class="py-3 px-4">1:${transaction.rr_ratio.toFixed(2)}</td>
                 <td class="py-3 px-4 font-semibold ${pnlClass}">$${transaction.pnl.toFixed(2)}</td>
                 <td class="py-3 px-4">
-                    <button class="notes-btn ${notesClass} transition duration-200 mr-2" data-id="${transaction.id}" title="Notes">
-                        ${notesIcon}
+                    <button class="view-edit-btn text-slate-300 hover:text-primary transition duration-200 mr-2" data-id="${transaction.id}" title="View/Edit">
+                        📝
                     </button>
                     <button class="delete-transaction-btn text-slate-400 hover:text-danger transition duration-200" data-id="${transaction.id}" title="Delete transaction">
                         ✕
@@ -374,10 +415,10 @@ class TradingTester {
             tbody.appendChild(row);
         });
 
-        document.querySelectorAll('.notes-btn').forEach(btn => {
+        document.querySelectorAll('.view-edit-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const transactionId = parseInt(e.target.getAttribute('data-id'));
-                this.openNotesModal(transactionId);
+                this.openTransactionEditModal(transactionId);
             });
         });
 
@@ -696,38 +737,6 @@ class TradingTester {
         });
     }
 
-    openNotesModal(transactionId) {
-        const transaction = this.db.getTransaction(transactionId);
-        if (!transaction) {
-            alert('Transaction not found!');
-            return;
-        }
-
-        this.currentTransactionId = transactionId;
-        document.getElementById('transactionNotes').value = transaction.notes || '';
-        document.getElementById('notesModal').classList.remove('hidden');
-    }
-
-    closeNotesModal() {
-        document.getElementById('notesModal').classList.add('hidden');
-        this.currentTransactionId = null;
-        document.getElementById('transactionNotes').value = '';
-    }
-
-    saveNotes() {
-        if (!this.currentTransactionId) return;
-
-        const notes = document.getElementById('transactionNotes').value;
-
-        try {
-            this.db.updateTransactionNotes(this.currentTransactionId, notes);
-            this.closeNotesModal();
-            this.loadTransactionHistory();
-        } catch (error) {
-            console.error('Error saving notes:', error);
-            alert('Error saving notes!');
-        }
-    }
 
     exportBackup() {
         try {
@@ -770,6 +779,865 @@ class TradingTester {
             alert('Error loading backup!');
             event.target.value = '';
         }
+    }
+
+    // Tag Management Methods
+    addTag() {
+        if (!this.currentAccount) {
+            alert('Select an account!');
+            return;
+        }
+
+        const name = document.getElementById('newTagName').value.trim();
+        const category = document.getElementById('newTagCategory').value;
+        const allowMultiple = document.getElementById('newTagAllowMultiple').checked;
+
+        if (!name) {
+            alert('Enter tag name!');
+            return;
+        }
+
+        try {
+            this.db.addTagDefinition(this.currentAccount.id, name, category, allowMultiple);
+            document.getElementById('newTagName').value = '';
+            document.getElementById('newTagAllowMultiple').checked = false;
+            this.loadTags();
+        } catch (error) {
+            console.error('Error adding tag:', error);
+            if (error.message && error.message.includes('UNIQUE constraint failed')) {
+                alert('Tag with this name already exists!');
+            } else {
+                alert('Error adding tag!');
+            }
+        }
+    }
+
+    loadTags() {
+        if (!this.currentAccount) return;
+
+        const tags = this.db.getTagDefinitions(this.currentAccount.id);
+        const container = document.getElementById('tagsContainer');
+        container.innerHTML = '';
+
+        // Group by category
+        const categories = {
+            'Pre-Entry': [],
+            'Entry → Break-Even': [],
+            'W trakcie transakcji': [],
+            'Exit': [],
+            'Other': []
+        };
+
+        tags.forEach(tag => {
+            if (categories[tag.category]) {
+                categories[tag.category].push(tag);
+            }
+        });
+
+        // Render each category
+        Object.keys(categories).forEach(category => {
+            const categoryTags = categories[category];
+            if (categoryTags.length === 0) return;
+
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'mb-6';
+            categoryDiv.innerHTML = `
+                <h4 class="text-lg font-semibold text-slate-100 mb-3">${category}</h4>
+                <div class="space-y-3" id="category-${category.replace(/\s+/g, '-')}"></div>
+            `;
+            container.appendChild(categoryDiv);
+
+            const categoryContainer = categoryDiv.querySelector(`#category-${category.replace(/\s+/g, '-')}`);
+
+            categoryTags.forEach(tag => {
+                const fields = this.db.getTagFields(tag.id);
+
+                const tagCard = document.createElement('div');
+                tagCard.className = 'bg-slate-700/50 border border-slate-600 rounded-lg p-4';
+
+                let fieldsHTML = '';
+                if (fields.length > 0) {
+                    fieldsHTML = `
+                        <div class="mt-3 pt-3 border-t border-slate-600">
+                            <p class="text-xs text-slate-400 mb-2">Fields:</p>
+                            <div class="space-y-1">
+                                ${fields.map(field => `
+                                    <div class="flex justify-between items-center text-sm">
+                                        <span class="text-slate-300">${field.field_name} <span class="text-xs text-slate-500">(${field.field_type})</span>${field.is_required ? ' <span class="text-red-400">*</span>' : ''}</span>
+                                        <button class="delete-field-btn text-slate-400 hover:text-danger transition" data-field-id="${field.id}">✕</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                tagCard.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-semibold text-slate-100">${tag.name}</span>
+                                ${tag.allow_multiple ? '<span class="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">Multiple</span>' : ''}
+                            </div>
+                            ${fieldsHTML}
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="add-field-btn px-3 py-1 bg-primary hover:bg-blue-600 text-white text-sm rounded transition" data-tag-id="${tag.id}">
+                                + Field
+                            </button>
+                            <button class="delete-tag-btn px-3 py-1 bg-danger hover:bg-red-600 text-white text-sm rounded transition" data-tag-id="${tag.id}">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                categoryContainer.appendChild(tagCard);
+            });
+        });
+
+        // Attach event listeners
+        document.querySelectorAll('.add-field-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tagId = parseInt(e.target.getAttribute('data-tag-id'));
+                this.openTagFieldModal(tagId);
+            });
+        });
+
+        document.querySelectorAll('.delete-tag-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tagId = parseInt(e.target.getAttribute('data-tag-id'));
+                this.deleteTag(tagId);
+            });
+        });
+
+        document.querySelectorAll('.delete-field-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const fieldId = parseInt(e.target.getAttribute('data-field-id'));
+                this.deleteTagField(fieldId);
+            });
+        });
+    }
+
+    deleteTag(tagId) {
+        if (confirm('Are you sure you want to delete this tag? All associated fields will be deleted!')) {
+            try {
+                this.db.deleteTagDefinition(tagId);
+                this.loadTags();
+            } catch (error) {
+                console.error('Error deleting tag:', error);
+                alert('Error deleting tag!');
+            }
+        }
+    }
+
+    openTagFieldModal(tagDefinitionId) {
+        this.currentTagDefinitionId = tagDefinitionId;
+        document.getElementById('tagFieldModal').classList.remove('hidden');
+        document.getElementById('tagFieldForm').reset();
+        document.getElementById('fieldOptionsContainer').classList.add('hidden');
+    }
+
+    closeTagFieldModal() {
+        document.getElementById('tagFieldModal').classList.add('hidden');
+        this.currentTagDefinitionId = null;
+        document.getElementById('tagFieldForm').reset();
+    }
+
+    addTagField() {
+        if (!this.currentTagDefinitionId) return;
+
+        const fieldName = document.getElementById('fieldName').value.trim();
+        const fieldType = document.getElementById('fieldType').value;
+        const isRequired = document.getElementById('fieldRequired').checked;
+
+        if (!fieldName) {
+            alert('Enter field name!');
+            return;
+        }
+
+        let fieldConfig = {};
+
+        // For select and checkbox, parse options
+        if (fieldType === 'select' || fieldType === 'checkbox') {
+            const optionsText = document.getElementById('fieldOptions').value.trim();
+            if (!optionsText) {
+                alert('Enter at least one option!');
+                return;
+            }
+            const options = optionsText.split('\n').map(o => o.trim()).filter(o => o.length > 0);
+            if (options.length === 0) {
+                alert('Enter at least one option!');
+                return;
+            }
+            fieldConfig = { options };
+        }
+
+        try {
+            // Get current max display order
+            const existingFields = this.db.getTagFields(this.currentTagDefinitionId);
+            const displayOrder = existingFields.length;
+
+            this.db.addTagField(this.currentTagDefinitionId, fieldName, fieldType, fieldConfig, isRequired, displayOrder);
+            this.closeTagFieldModal();
+            this.loadTags();
+        } catch (error) {
+            console.error('Error adding tag field:', error);
+            alert('Error adding field!');
+        }
+    }
+
+    deleteTagField(fieldId) {
+        if (confirm('Are you sure you want to delete this field?')) {
+            try {
+                this.db.deleteTagField(fieldId);
+                this.loadTags();
+            } catch (error) {
+                console.error('Error deleting field:', error);
+                alert('Error deleting field!');
+            }
+        }
+    }
+
+    renderTransactionTagsForm() {
+        if (!this.currentAccount) return;
+
+        const container = document.getElementById('transactionTagsSection');
+        container.innerHTML = '';
+
+        const tags = this.db.getTagDefinitions(this.currentAccount.id);
+        if (tags.length === 0) return;
+
+        // Group by category
+        const categories = {
+            'Pre-Entry': [],
+            'Entry → Break-Even': [],
+            'W trakcie transakcji': [],
+            'Exit': [],
+            'Other': []
+        };
+
+        tags.forEach(tag => {
+            if (categories[tag.category]) {
+                categories[tag.category].push(tag);
+            }
+        });
+
+        // Render each category with tags
+        Object.keys(categories).forEach(category => {
+            const categoryTags = categories[category];
+            if (categoryTags.length === 0) return;
+
+            const categorySection = document.createElement('details');
+            categorySection.className = 'bg-slate-700/30 border border-slate-600 rounded-lg mb-3';
+            categorySection.innerHTML = `
+                <summary class="px-4 py-3 cursor-pointer font-semibold text-slate-100 hover:bg-slate-700/50 rounded-lg transition">
+                    ${category}
+                </summary>
+                <div class="px-4 pb-4 space-y-4" id="category-fields-${category.replace(/\s+/g, '-')}"></div>
+            `;
+            container.appendChild(categorySection);
+
+            const fieldsContainer = categorySection.querySelector(`#category-fields-${category.replace(/\s+/g, '-')}`);
+
+            categoryTags.forEach(tag => {
+                const fields = this.db.getTagFields(tag.id);
+                if (fields.length === 0) return;
+
+                const tagDiv = document.createElement('div');
+                tagDiv.className = 'border-t border-slate-600 pt-3 first:border-t-0 first:pt-0';
+                tagDiv.innerHTML = `
+                    <div class="flex items-center gap-3 mb-3">
+                        <label class="flex items-center gap-2 text-sm text-slate-300">
+                            <input type="checkbox" class="tag-enable-checkbox w-4 h-4 bg-slate-700 border border-slate-600 rounded focus:ring-2 focus:ring-primary" data-tag-id="${tag.id}">
+                            <span class="font-medium">${tag.name}</span>
+                        </label>
+                        ${tag.allow_multiple ? '<button type="button" class="add-tag-instance-btn text-xs px-2 py-1 bg-primary/20 text-primary rounded hover:bg-primary/30 transition hidden" data-tag-id="' + tag.id + '">+ Add Another</button>' : ''}
+                    </div>
+                    <div class="tag-fields-container hidden" data-tag-id="${tag.id}"></div>
+                `;
+                fieldsContainer.appendChild(tagDiv);
+
+                // Event listener for checkbox
+                const checkbox = tagDiv.querySelector('.tag-enable-checkbox');
+                const tagFieldsContainer = tagDiv.querySelector('.tag-fields-container');
+                const addInstanceBtn = tagDiv.querySelector('.add-tag-instance-btn');
+
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        tagFieldsContainer.classList.remove('hidden');
+                        if (addInstanceBtn) addInstanceBtn.classList.remove('hidden');
+                        this.renderTagFieldsInstance(tag, fields, tagFieldsContainer, 1);
+                    } else {
+                        tagFieldsContainer.classList.add('hidden');
+                        if (addInstanceBtn) addInstanceBtn.classList.add('hidden');
+                        tagFieldsContainer.innerHTML = '';
+                    }
+                });
+
+                // Event listener for "Add Another" button
+                if (addInstanceBtn && tag.allow_multiple) {
+                    addInstanceBtn.addEventListener('click', () => {
+                        const existingInstances = tagFieldsContainer.querySelectorAll('.tag-instance');
+                        const nextInstance = existingInstances.length + 1;
+                        this.renderTagFieldsInstance(tag, fields, tagFieldsContainer, nextInstance);
+                    });
+                }
+            });
+        });
+    }
+
+    renderTagFieldsInstance(tag, fields, container, instanceNumber) {
+        const instanceDiv = document.createElement('div');
+        instanceDiv.className = 'tag-instance bg-slate-700/30 rounded-lg p-3 mb-3';
+        instanceDiv.setAttribute('data-tag-id', tag.id);
+        instanceDiv.setAttribute('data-instance', instanceNumber);
+
+        let fieldsHTML = '';
+        if (tag.allow_multiple && instanceNumber > 1) {
+            fieldsHTML += `
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-xs text-slate-400">Instance #${instanceNumber}</span>
+                    <button type="button" class="remove-tag-instance-btn text-xs text-danger hover:text-red-400">Remove</button>
+                </div>
+            `;
+        }
+
+        fieldsHTML += '<div class="grid grid-cols-2 gap-3">';
+
+        fields.forEach(field => {
+            const fieldId = `tag_${tag.id}_${instanceNumber}_field_${field.id}`;
+            fieldsHTML += this.renderTagField(field, fieldId);
+        });
+
+        fieldsHTML += '</div>';
+        instanceDiv.innerHTML = fieldsHTML;
+        container.appendChild(instanceDiv);
+
+        // Add remove button listener
+        const removeBtn = instanceDiv.querySelector('.remove-tag-instance-btn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                instanceDiv.remove();
+            });
+        }
+    }
+
+    renderTagField(field, fieldId) {
+        const required = field.is_required ? 'required' : '';
+        const requiredLabel = field.is_required ? '<span class="text-red-400">*</span>' : '';
+
+        let fieldHTML = `
+            <div>
+                <label for="${fieldId}" class="block text-xs font-medium text-slate-300 mb-1">
+                    ${field.field_name} ${requiredLabel}
+                </label>
+        `;
+
+        switch (field.field_type) {
+            case 'number':
+                fieldHTML += `
+                    <input type="number" id="${fieldId}" ${required}
+                        class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                `;
+                break;
+
+            case 'decimal':
+                fieldHTML += `
+                    <input type="number" step="0.01" id="${fieldId}" ${required}
+                        class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                `;
+                break;
+
+            case 'boolean':
+                fieldHTML += `
+                    <select id="${fieldId}" ${required}
+                        class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                        <option value="">Select...</option>
+                        <option value="true">Yes / True</option>
+                        <option value="false">No / False</option>
+                    </select>
+                `;
+                break;
+
+            case 'select':
+                fieldHTML += `
+                    <select id="${fieldId}" ${required}
+                        class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                        <option value="">Select...</option>
+                        ${field.field_config.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                    </select>
+                `;
+                break;
+
+            case 'checkbox':
+                fieldHTML += `<div class="space-y-1 mt-1">`;
+                field.field_config.options.forEach((opt, idx) => {
+                    fieldHTML += `
+                        <label class="flex items-center gap-2 text-sm text-slate-300">
+                            <input type="checkbox" name="${fieldId}" value="${opt}"
+                                class="w-4 h-4 bg-slate-700 border border-slate-600 rounded focus:ring-2 focus:ring-primary">
+                            ${opt}
+                        </label>
+                    `;
+                });
+                fieldHTML += `</div>`;
+                break;
+
+            case 'datetime':
+                fieldHTML += `
+                    <input type="datetime-local" id="${fieldId}" ${required}
+                        class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                `;
+                break;
+
+            case 'text':
+                fieldHTML += `
+                    <input type="text" id="${fieldId}" ${required}
+                        class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                `;
+                break;
+
+            case 'textarea':
+                fieldHTML += `
+                    <textarea id="${fieldId}" rows="3" ${required}
+                        class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100 resize-none"></textarea>
+                `;
+                break;
+        }
+
+        fieldHTML += `</div>`;
+        return fieldHTML;
+    }
+
+    collectTransactionTagsData() {
+        const tagsData = [];
+        const tagContainers = document.querySelectorAll('.tag-fields-container:not(.hidden)');
+
+        tagContainers.forEach(container => {
+            const tagId = parseInt(container.getAttribute('data-tag-id'));
+            const instances = container.querySelectorAll('.tag-instance');
+
+            instances.forEach(instance => {
+                const instanceNumber = parseInt(instance.getAttribute('data-instance'));
+                const fields = instance.querySelectorAll('input, select, textarea');
+                const fieldValues = {};
+
+                fields.forEach(field => {
+                    if (field.type === 'checkbox') {
+                        // For checkbox groups, collect all checked values
+                        const checkboxes = instance.querySelectorAll(`input[name="${field.name}"]:checked`);
+                        if (checkboxes.length > 0) {
+                            const values = Array.from(checkboxes).map(cb => cb.value);
+                            // Extract field id from the name
+                            const fieldIdMatch = field.name.match(/field_(\d+)/);
+                            if (fieldIdMatch) {
+                                fieldValues[fieldIdMatch[1]] = values.join(', ');
+                            }
+                        }
+                    } else if (field.id) {
+                        // Extract field id from the element id
+                        const fieldIdMatch = field.id.match(/field_(\d+)/);
+                        if (fieldIdMatch && field.value) {
+                            fieldValues[fieldIdMatch[1]] = field.value;
+                        }
+                    }
+                });
+
+                if (Object.keys(fieldValues).length > 0) {
+                    tagsData.push({
+                        tagDefinitionId: tagId,
+                        instanceNumber: instanceNumber,
+                        fieldValues: fieldValues
+                    });
+                }
+            });
+        });
+
+        return tagsData;
+    }
+
+    saveTransactionTags(transactionId, tagsData) {
+        try {
+            tagsData.forEach(tagData => {
+                const transactionTagId = this.db.addTransactionTag(
+                    transactionId,
+                    tagData.tagDefinitionId,
+                    tagData.instanceNumber
+                );
+
+                // Save field values
+                Object.keys(tagData.fieldValues).forEach(fieldId => {
+                    this.db.addTransactionTagValue(
+                        transactionTagId,
+                        parseInt(fieldId),
+                        tagData.fieldValues[fieldId]
+                    );
+                });
+            });
+        } catch (error) {
+            console.error('Error saving transaction tags:', error);
+            throw error;
+        }
+    }
+
+    openTransactionEditModal(transactionId) {
+        const transaction = this.db.getTransaction(transactionId);
+        if (!transaction) {
+            alert('Transaction not found!');
+            return;
+        }
+
+        this.currentTransactionId = transactionId;
+        const content = document.getElementById('transactionEditContent');
+        content.innerHTML = '';
+
+        // Transaction Details Section
+        const detailsSection = document.createElement('div');
+        detailsSection.className = 'bg-slate-700/30 border border-slate-600 rounded-lg p-6';
+        detailsSection.innerHTML = `
+            <h3 class="text-xl font-semibold text-slate-100 mb-4">Transaction Details</h3>
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Date</label>
+                    <input type="date" id="edit_transactionDate" value="${transaction.created_at}"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Instrument</label>
+                    <input type="text" id="edit_instrument" value="${transaction.instrument}"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Strategy</label>
+                    <input type="text" id="edit_strategy" value="${transaction.strategy}"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Direction</label>
+                    <select id="edit_direction"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">
+                        <option value="LONG" ${transaction.direction === 'LONG' ? 'selected' : ''}>LONG</option>
+                        <option value="SHORT" ${transaction.direction === 'SHORT' ? 'selected' : ''}>SHORT</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Entry Price</label>
+                    <input type="number" step="0.00001" id="edit_entryPrice" value="${transaction.entry_price}"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Stop Loss</label>
+                    <input type="number" step="0.00001" id="edit_stopLoss" value="${transaction.stop_loss}"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Exit Price</label>
+                    <input type="number" step="0.00001" id="edit_exitPrice" value="${transaction.exit_price}"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Risk %</label>
+                    <input type="number" step="0.1" id="edit_riskPercent" value="${transaction.risk_percent}"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">
+                </div>
+            </div>
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-slate-300 mb-2">Notes</label>
+                <textarea id="edit_notes" rows="3"
+                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100 resize-none">${transaction.notes || ''}</textarea>
+            </div>
+        `;
+        content.appendChild(detailsSection);
+
+        // Tags Section
+        this.renderEditableTags(transactionId, content);
+
+        document.getElementById('transactionEditModal').classList.remove('hidden');
+    }
+
+    renderEditableTags(transactionId, container) {
+        const tagsWithValues = this.db.getTransactionTagsWithValues(transactionId);
+        const allTags = this.db.getTagDefinitions(this.currentAccount.id);
+
+        const tagsSection = document.createElement('div');
+        tagsSection.className = 'bg-slate-700/30 border border-slate-600 rounded-lg p-6';
+        tagsSection.innerHTML = '<h3 class="text-xl font-semibold text-slate-100 mb-4">Tags</h3>';
+
+        const categories = {
+            'Pre-Entry': [],
+            'Entry → Break-Even': [],
+            'W trakcie transakcji': [],
+            'Exit': [],
+            'Other': []
+        };
+
+        // Group existing tags by category
+        tagsWithValues.forEach(tag => {
+            if (categories[tag.category]) {
+                categories[tag.category].push(tag);
+            }
+        });
+
+        // Render each category
+        Object.keys(categories).forEach(category => {
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'mb-4';
+
+            const categoryHeader = document.createElement('h4');
+            categoryHeader.className = 'text-lg font-medium text-slate-100 mb-3';
+            categoryHeader.textContent = category;
+            categoryDiv.appendChild(categoryHeader);
+
+            const categoryContent = document.createElement('div');
+            categoryContent.className = 'space-y-3';
+
+            const categoryTags = categories[category];
+
+            // Group by tag definition and instance
+            const tagsByDef = {};
+            categoryTags.forEach(tag => {
+                const key = `${tag.tag_definition_id}_${tag.instance_number}`;
+                if (!tagsByDef[key]) {
+                    tagsByDef[key] = {
+                        transactionTagId: tag.id,
+                        tagDefinitionId: tag.tag_definition_id,
+                        name: tag.name,
+                        instance: tag.instance_number,
+                        values: tag.values || []
+                    };
+                }
+            });
+
+            Object.values(tagsByDef).forEach(tag => {
+                const tagCard = document.createElement('div');
+                tagCard.className = 'bg-slate-700/50 rounded-lg p-4';
+
+                let cardHTML = `
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium text-slate-100">${tag.name}</span>
+                            ${tag.instance > 1 ? `<span class="text-xs text-slate-400">#${tag.instance}</span>` : ''}
+                        </div>
+                        <button class="remove-tag-instance-btn text-xs text-danger hover:text-red-400" data-transaction-tag-id="${tag.transactionTagId}">Remove</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                `;
+
+                tag.values.forEach(value => {
+                    const fieldId = `edit_tag_${tag.transactionTagId}_field_${value.tag_field_id}`;
+                    cardHTML += this.renderEditableTagField(value, fieldId);
+                });
+
+                cardHTML += `</div>`;
+                tagCard.innerHTML = cardHTML;
+                categoryContent.appendChild(tagCard);
+            });
+
+            if (categoryTags.length === 0) {
+                categoryContent.innerHTML = '<p class="text-sm text-slate-400">No tags in this category</p>';
+            }
+
+            categoryDiv.appendChild(categoryContent);
+            tagsSection.appendChild(categoryDiv);
+        });
+
+        container.appendChild(tagsSection);
+
+        // Add event listeners for remove buttons
+        document.querySelectorAll('.remove-tag-instance-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (confirm('Remove this tag instance?')) {
+                    const transactionTagId = parseInt(e.target.getAttribute('data-transaction-tag-id'));
+                    this.db.deleteTransactionTag(transactionTagId);
+                    this.openTransactionEditModal(transactionId); // Refresh modal
+                }
+            });
+        });
+    }
+
+    renderEditableTagField(value, fieldId) {
+        let fieldHTML = `
+            <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">${value.field_name}</label>
+        `;
+
+        switch (value.field_type) {
+            case 'number':
+                fieldHTML += `<input type="number" id="${fieldId}" value="${value.value || ''}"
+                    class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">`;
+                break;
+            case 'decimal':
+                fieldHTML += `<input type="number" step="0.01" id="${fieldId}" value="${value.value || ''}"
+                    class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">`;
+                break;
+            case 'boolean':
+                fieldHTML += `<select id="${fieldId}"
+                    class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">
+                    <option value="">Select...</option>
+                    <option value="true" ${value.value === 'true' ? 'selected' : ''}>Yes / True</option>
+                    <option value="false" ${value.value === 'false' ? 'selected' : ''}>No / False</option>
+                </select>`;
+                break;
+            case 'select':
+                const selectOptions = value.field_config.options || [];
+                fieldHTML += `<select id="${fieldId}"
+                    class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">
+                    <option value="">Select...</option>
+                    ${selectOptions.map(opt => `<option value="${opt}" ${value.value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                </select>`;
+                break;
+            case 'checkbox':
+                const checkOptions = value.field_config.options || [];
+                const selectedValues = value.value ? value.value.split(', ') : [];
+                fieldHTML += `<div class="space-y-1 mt-1">`;
+                checkOptions.forEach(opt => {
+                    const checked = selectedValues.includes(opt) ? 'checked' : '';
+                    fieldHTML += `
+                        <label class="flex items-center gap-2 text-sm text-slate-300">
+                            <input type="checkbox" name="${fieldId}" value="${opt}" ${checked}
+                                class="w-4 h-4 bg-slate-700 border border-slate-600 rounded focus:ring-2 focus:ring-primary">
+                            ${opt}
+                        </label>
+                    `;
+                });
+                fieldHTML += `</div>`;
+                break;
+            case 'datetime':
+                fieldHTML += `<input type="datetime-local" id="${fieldId}" value="${value.value || ''}"
+                    class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">`;
+                break;
+            case 'text':
+                fieldHTML += `<input type="text" id="${fieldId}" value="${value.value || ''}"
+                    class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100">`;
+                break;
+            case 'textarea':
+                fieldHTML += `<textarea id="${fieldId}" rows="3"
+                    class="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-slate-100 resize-none">${value.value || ''}</textarea>`;
+                break;
+        }
+
+        fieldHTML += `</div>`;
+        return fieldHTML;
+    }
+
+    closeTransactionEditModal() {
+        document.getElementById('transactionEditModal').classList.add('hidden');
+        this.currentTransactionId = null;
+    }
+
+    saveTransactionEdit() {
+        if (!this.currentTransactionId) return;
+
+        try {
+            // Get transaction details
+            const transactionDate = document.getElementById('edit_transactionDate').value;
+            const instrument = document.getElementById('edit_instrument').value;
+            const strategy = document.getElementById('edit_strategy').value;
+            const direction = document.getElementById('edit_direction').value;
+            const entryPrice = parseFloat(document.getElementById('edit_entryPrice').value);
+            const stopLoss = parseFloat(document.getElementById('edit_stopLoss').value);
+            const exitPrice = parseFloat(document.getElementById('edit_exitPrice').value);
+            const riskPercent = parseFloat(document.getElementById('edit_riskPercent').value);
+            const notes = document.getElementById('edit_notes').value;
+
+            // Recalculate values
+            const oldTransaction = this.db.getTransaction(this.currentTransactionId);
+            const oldPnl = oldTransaction.pnl;
+
+            const riskAmount = (this.currentAccount.current_balance * riskPercent) / 100;
+            const priceDifference = Math.abs(entryPrice - stopLoss);
+            const positionSize = riskAmount / priceDifference;
+
+            let pnl = 0;
+            let rewardAmount = 0;
+
+            if (direction === 'LONG') {
+                pnl = (exitPrice - entryPrice) * positionSize;
+                rewardAmount = Math.abs(exitPrice - entryPrice) * positionSize;
+            } else if (direction === 'SHORT') {
+                pnl = (entryPrice - exitPrice) * positionSize;
+                rewardAmount = Math.abs(entryPrice - exitPrice) * positionSize;
+            }
+
+            const rrRatio = riskAmount > 0 ? (rewardAmount / riskAmount) : 0;
+            const roi = this.currentAccount.initial_balance > 0 ? (pnl / this.currentAccount.initial_balance) * 100 : 0;
+
+            // Update transaction in database (need to add update method)
+            this.updateTransaction(this.currentTransactionId, {
+                instrument,
+                strategy,
+                direction,
+                entry_price: entryPrice,
+                stop_loss: stopLoss,
+                exit_price: exitPrice,
+                risk_percent: riskPercent,
+                risk_amount: riskAmount,
+                position_size: positionSize,
+                rr_ratio: rrRatio,
+                pnl,
+                roi,
+                created_at: transactionDate,
+                notes
+            });
+
+            // Update tag values
+            const tagsWithValues = this.db.getTransactionTagsWithValues(this.currentTransactionId);
+            tagsWithValues.forEach(tag => {
+                tag.values.forEach(value => {
+                    const fieldId = `edit_tag_${tag.id}_field_${value.tag_field_id}`;
+                    const element = document.getElementById(fieldId);
+
+                    let newValue = '';
+                    if (element) {
+                        if (element.type === 'checkbox') {
+                            const checkboxes = document.querySelectorAll(`input[name="${fieldId}"]:checked`);
+                            newValue = Array.from(checkboxes).map(cb => cb.value).join(', ');
+                        } else {
+                            newValue = element.value;
+                        }
+                    }
+
+                    // Update value in database
+                    this.db.updateTransactionTagValue(value.id, newValue);
+                });
+            });
+
+            // Update account balance
+            const pnlDifference = pnl - oldPnl;
+            const newBalance = this.currentAccount.current_balance + pnlDifference;
+            this.db.updateAccountBalance(this.currentAccount.id, newBalance);
+            this.currentAccount.current_balance = newBalance;
+
+            this.closeTransactionEditModal();
+            this.updateDashboard();
+            this.loadTransactionHistory();
+            this.updateStatistics();
+            this.loadAccounts();
+
+            alert('Transaction updated successfully!');
+        } catch (error) {
+            console.error('Error saving transaction:', error);
+            alert('Error saving transaction!');
+        }
+    }
+
+    updateTransaction(transactionId, data) {
+        // We need to add this method to database.js
+        const stmt = this.db.db.prepare(`
+            UPDATE transactions
+            SET instrument = ?, strategy = ?, direction = ?, entry_price = ?, stop_loss = ?,
+                exit_price = ?, risk_percent = ?, risk_amount = ?, position_size = ?,
+                rr_ratio = ?, pnl = ?, roi = ?, created_at = ?, notes = ?
+            WHERE id = ?
+        `);
+        stmt.run([
+            data.instrument, data.strategy, data.direction, data.entry_price, data.stop_loss,
+            data.exit_price, data.risk_percent, data.risk_amount, data.position_size,
+            data.rr_ratio, data.pnl, data.roi, data.created_at, data.notes, transactionId
+        ]);
+        stmt.free();
+        this.db.save();
     }
 }
 

@@ -82,10 +82,65 @@ class Database {
             )
         `;
 
+        const createTagDefinitionsTable = `
+            CREATE TABLE IF NOT EXISTS tag_definitions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                category TEXT NOT NULL,
+                allow_multiple INTEGER NOT NULL DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(account_id, name),
+                FOREIGN KEY (account_id) REFERENCES accounts (id)
+            )
+        `;
+
+        const createTagFieldsTable = `
+            CREATE TABLE IF NOT EXISTS tag_fields (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tag_definition_id INTEGER NOT NULL,
+                field_name TEXT NOT NULL,
+                field_type TEXT NOT NULL,
+                field_config TEXT DEFAULT '{}',
+                is_required INTEGER NOT NULL DEFAULT 0,
+                display_order INTEGER NOT NULL DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (tag_definition_id) REFERENCES tag_definitions (id) ON DELETE CASCADE
+            )
+        `;
+
+        const createTransactionTagsTable = `
+            CREATE TABLE IF NOT EXISTS transaction_tags (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                transaction_id INTEGER NOT NULL,
+                tag_definition_id INTEGER NOT NULL,
+                instance_number INTEGER NOT NULL DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (transaction_id) REFERENCES transactions (id) ON DELETE CASCADE,
+                FOREIGN KEY (tag_definition_id) REFERENCES tag_definitions (id) ON DELETE CASCADE
+            )
+        `;
+
+        const createTransactionTagValuesTable = `
+            CREATE TABLE IF NOT EXISTS transaction_tag_values (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                transaction_tag_id INTEGER NOT NULL,
+                tag_field_id INTEGER NOT NULL,
+                value TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (transaction_tag_id) REFERENCES transaction_tags (id) ON DELETE CASCADE,
+                FOREIGN KEY (tag_field_id) REFERENCES tag_fields (id) ON DELETE CASCADE
+            )
+        `;
+
         this.db.run(createAccountsTable);
         this.db.run(createTransactionsTable);
         this.db.run(createStrategiesTable);
         this.db.run(createInstrumentsTable);
+        this.db.run(createTagDefinitionsTable);
+        this.db.run(createTagFieldsTable);
+        this.db.run(createTransactionTagsTable);
+        this.db.run(createTransactionTagValuesTable);
         this.save();
     }
 
@@ -445,6 +500,305 @@ class Database {
             this.save();
         } catch (error) {
             console.error('Error updating transaction notes:', error);
+            throw error;
+        }
+    }
+
+    // Tag Definitions methods
+    addTagDefinition(accountId, name, category, allowMultiple = false) {
+        try {
+            const stmt = this.db.prepare(`
+                INSERT INTO tag_definitions (account_id, name, category, allow_multiple)
+                VALUES (?, ?, ?, ?)
+            `);
+            stmt.run([accountId, name, category, allowMultiple ? 1 : 0]);
+            const tagId = this.db.exec("SELECT last_insert_rowid()")[0].values[0][0];
+            stmt.free();
+            this.save();
+            return tagId;
+        } catch (error) {
+            console.error('Error adding tag definition:', error);
+            throw error;
+        }
+    }
+
+    getTagDefinitions(accountId, category = null) {
+        try {
+            let query = "SELECT * FROM tag_definitions WHERE account_id = ?";
+            const params = [accountId];
+
+            if (category) {
+                query += " AND category = ?";
+                params.push(category);
+            }
+
+            query += " ORDER BY category, name";
+
+            const stmt = this.db.prepare(query);
+            stmt.bind(params);
+
+            const tags = [];
+            while (stmt.step()) {
+                const row = stmt.getAsObject();
+                tags.push({
+                    ...row,
+                    allow_multiple: row.allow_multiple === 1
+                });
+            }
+            stmt.free();
+
+            return tags;
+        } catch (error) {
+            console.error('Error getting tag definitions:', error);
+            return [];
+        }
+    }
+
+    getTagDefinition(tagId) {
+        try {
+            const stmt = this.db.prepare("SELECT * FROM tag_definitions WHERE id = ?");
+            const result = stmt.getAsObject([tagId]);
+            stmt.free();
+            if (result.id) {
+                result.allow_multiple = result.allow_multiple === 1;
+            }
+            return result;
+        } catch (error) {
+            console.error('Error getting tag definition:', error);
+            return null;
+        }
+    }
+
+    deleteTagDefinition(tagId) {
+        try {
+            const stmt = this.db.prepare("DELETE FROM tag_definitions WHERE id = ?");
+            stmt.run([tagId]);
+            stmt.free();
+            this.save();
+        } catch (error) {
+            console.error('Error deleting tag definition:', error);
+            throw error;
+        }
+    }
+
+    // Tag Fields methods
+    addTagField(tagDefinitionId, fieldName, fieldType, fieldConfig = {}, isRequired = false, displayOrder = 0) {
+        try {
+            const stmt = this.db.prepare(`
+                INSERT INTO tag_fields (tag_definition_id, field_name, field_type, field_config, is_required, display_order)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `);
+            stmt.run([tagDefinitionId, fieldName, fieldType, JSON.stringify(fieldConfig), isRequired ? 1 : 0, displayOrder]);
+            const fieldId = this.db.exec("SELECT last_insert_rowid()")[0].values[0][0];
+            stmt.free();
+            this.save();
+            return fieldId;
+        } catch (error) {
+            console.error('Error adding tag field:', error);
+            throw error;
+        }
+    }
+
+    getTagFields(tagDefinitionId) {
+        try {
+            const stmt = this.db.prepare(`
+                SELECT * FROM tag_fields
+                WHERE tag_definition_id = ?
+                ORDER BY display_order, id
+            `);
+            stmt.bind([tagDefinitionId]);
+
+            const fields = [];
+            while (stmt.step()) {
+                const row = stmt.getAsObject();
+                fields.push({
+                    ...row,
+                    field_config: JSON.parse(row.field_config || '{}'),
+                    is_required: row.is_required === 1
+                });
+            }
+            stmt.free();
+
+            return fields;
+        } catch (error) {
+            console.error('Error getting tag fields:', error);
+            return [];
+        }
+    }
+
+    deleteTagField(fieldId) {
+        try {
+            const stmt = this.db.prepare("DELETE FROM tag_fields WHERE id = ?");
+            stmt.run([fieldId]);
+            stmt.free();
+            this.save();
+        } catch (error) {
+            console.error('Error deleting tag field:', error);
+            throw error;
+        }
+    }
+
+    updateTagField(fieldId, fieldName, fieldType, fieldConfig, isRequired, displayOrder) {
+        try {
+            const stmt = this.db.prepare(`
+                UPDATE tag_fields
+                SET field_name = ?, field_type = ?, field_config = ?, is_required = ?, display_order = ?
+                WHERE id = ?
+            `);
+            stmt.run([fieldName, fieldType, JSON.stringify(fieldConfig), isRequired ? 1 : 0, displayOrder, fieldId]);
+            stmt.free();
+            this.save();
+        } catch (error) {
+            console.error('Error updating tag field:', error);
+            throw error;
+        }
+    }
+
+    // Transaction Tags methods
+    addTransactionTag(transactionId, tagDefinitionId, instanceNumber = 1) {
+        try {
+            const stmt = this.db.prepare(`
+                INSERT INTO transaction_tags (transaction_id, tag_definition_id, instance_number)
+                VALUES (?, ?, ?)
+            `);
+            stmt.run([transactionId, tagDefinitionId, instanceNumber]);
+            const transactionTagId = this.db.exec("SELECT last_insert_rowid()")[0].values[0][0];
+            stmt.free();
+            this.save();
+            return transactionTagId;
+        } catch (error) {
+            console.error('Error adding transaction tag:', error);
+            throw error;
+        }
+    }
+
+    getTransactionTags(transactionId) {
+        try {
+            const stmt = this.db.prepare(`
+                SELECT tt.*, td.name, td.category, td.allow_multiple
+                FROM transaction_tags tt
+                JOIN tag_definitions td ON tt.tag_definition_id = td.id
+                WHERE tt.transaction_id = ?
+                ORDER BY td.category, tt.tag_definition_id, tt.instance_number
+            `);
+            stmt.bind([transactionId]);
+
+            const tags = [];
+            while (stmt.step()) {
+                const row = stmt.getAsObject();
+                tags.push({
+                    ...row,
+                    allow_multiple: row.allow_multiple === 1
+                });
+            }
+            stmt.free();
+
+            return tags;
+        } catch (error) {
+            console.error('Error getting transaction tags:', error);
+            return [];
+        }
+    }
+
+    deleteTransactionTag(transactionTagId) {
+        try {
+            const stmt = this.db.prepare("DELETE FROM transaction_tags WHERE id = ?");
+            stmt.run([transactionTagId]);
+            stmt.free();
+            this.save();
+        } catch (error) {
+            console.error('Error deleting transaction tag:', error);
+            throw error;
+        }
+    }
+
+    deleteTransactionTagsByTransaction(transactionId) {
+        try {
+            const stmt = this.db.prepare("DELETE FROM transaction_tags WHERE transaction_id = ?");
+            stmt.run([transactionId]);
+            stmt.free();
+            this.save();
+        } catch (error) {
+            console.error('Error deleting transaction tags:', error);
+            throw error;
+        }
+    }
+
+    // Transaction Tag Values methods
+    addTransactionTagValue(transactionTagId, tagFieldId, value) {
+        try {
+            const stmt = this.db.prepare(`
+                INSERT INTO transaction_tag_values (transaction_tag_id, tag_field_id, value)
+                VALUES (?, ?, ?)
+            `);
+            stmt.run([transactionTagId, tagFieldId, value]);
+            const valueId = this.db.exec("SELECT last_insert_rowid()")[0].values[0][0];
+            stmt.free();
+            this.save();
+            return valueId;
+        } catch (error) {
+            console.error('Error adding transaction tag value:', error);
+            throw error;
+        }
+    }
+
+    getTransactionTagValues(transactionTagId) {
+        try {
+            const stmt = this.db.prepare(`
+                SELECT ttv.*, tf.field_name, tf.field_type, tf.field_config
+                FROM transaction_tag_values ttv
+                JOIN tag_fields tf ON ttv.tag_field_id = tf.id
+                WHERE ttv.transaction_tag_id = ?
+                ORDER BY tf.display_order, tf.id
+            `);
+            stmt.bind([transactionTagId]);
+
+            const values = [];
+            while (stmt.step()) {
+                const row = stmt.getAsObject();
+                values.push({
+                    ...row,
+                    field_config: JSON.parse(row.field_config || '{}')
+                });
+            }
+            stmt.free();
+
+            return values;
+        } catch (error) {
+            console.error('Error getting transaction tag values:', error);
+            return [];
+        }
+    }
+
+    getTransactionTagsWithValues(transactionId) {
+        try {
+            const transactionTags = this.getTransactionTags(transactionId);
+
+            return transactionTags.map(tag => {
+                const values = this.getTransactionTagValues(tag.id);
+                return {
+                    ...tag,
+                    values: values
+                };
+            });
+        } catch (error) {
+            console.error('Error getting transaction tags with values:', error);
+            return [];
+        }
+    }
+
+    updateTransactionTagValue(valueId, newValue) {
+        try {
+            const stmt = this.db.prepare(`
+                UPDATE transaction_tag_values
+                SET value = ?
+                WHERE id = ?
+            `);
+            stmt.run([newValue, valueId]);
+            stmt.free();
+            this.save();
+        } catch (error) {
+            console.error('Error updating transaction tag value:', error);
             throw error;
         }
     }

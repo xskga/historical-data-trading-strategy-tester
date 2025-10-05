@@ -22,27 +22,6 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
-    <!-- Notes Modal -->
-    <div id="notesModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
-        <div class="bg-slate-800 rounded-xl p-8 w-full max-w-2xl border border-slate-700 shadow-2xl">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-slate-100">Transaction Notes</h2>
-                <button id="closeNotesModal" class="text-slate-400 hover:text-slate-100 text-3xl leading-none">&times;</button>
-            </div>
-            <textarea id="transactionNotes" rows="10"
-                class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100 resize-none"
-                placeholder="Enter notes about this transaction..."></textarea>
-            <div class="flex gap-3 mt-4">
-                <button id="saveNotesBtn" class="flex-1 bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
-                    Save
-                </button>
-                <button id="cancelNotesBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition duration-200">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Account Modal -->
     <div id="accountModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
         <div class="bg-slate-800 rounded-xl p-8 w-full max-w-md border border-slate-700 shadow-2xl">
@@ -70,6 +49,83 @@
                     Create Account
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- Tag Field Modal -->
+    <div id="tagFieldModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-slate-800 rounded-xl p-8 w-full max-w-2xl border border-slate-700 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-100">Add Field to Tag</h2>
+                <button id="closeTagFieldModal" class="text-slate-400 hover:text-slate-100 text-3xl leading-none">&times;</button>
+            </div>
+            <form id="tagFieldForm" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="fieldName" class="block text-sm font-medium text-slate-300 mb-2">Field Name</label>
+                        <input type="text" id="fieldName" required
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                    </div>
+                    <div>
+                        <label for="fieldType" class="block text-sm font-medium text-slate-300 mb-2">Field Type</label>
+                        <select id="fieldType" required
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                            <option value="number">Number (Integer)</option>
+                            <option value="decimal">Decimal</option>
+                            <option value="boolean">True/False</option>
+                            <option value="select">Dropdown List</option>
+                            <option value="checkbox">Checkbox (Multiple)</option>
+                            <option value="datetime">Date & Time</option>
+                            <option value="text">Text</option>
+                            <option value="textarea">Notes (Textarea)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Options for Select/Checkbox -->
+                <div id="fieldOptionsContainer" class="hidden">
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Options (one per line)</label>
+                    <textarea id="fieldOptions" rows="4"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100 resize-none"
+                        placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-2 text-sm text-slate-300">
+                        <input type="checkbox" id="fieldRequired"
+                            class="w-4 h-4 bg-slate-700 border border-slate-600 rounded focus:ring-2 focus:ring-primary">
+                        Required Field
+                    </label>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button type="submit" class="flex-1 bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                        Add Field
+                    </button>
+                    <button type="button" id="cancelTagFieldBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Transaction Edit Modal -->
+    <div id="transactionEditModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-slate-800 rounded-xl p-8 w-full max-w-6xl border border-slate-700 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-100">View/Edit Transaction</h2>
+                <button id="closeTransactionEditModal" class="text-slate-400 hover:text-slate-100 text-3xl leading-none">&times;</button>
+            </div>
+            <div id="transactionEditContent" class="space-y-6"></div>
+            <div class="flex gap-3 mt-6">
+                <button id="saveTransactionEditBtn" class="flex-1 bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                    Save Changes
+                </button>
+                <button id="cancelTransactionEditBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                    Cancel
+                </button>
+            </div>
         </div>
     </div>
 
@@ -187,6 +243,17 @@
                             </div>
                         </div>
 
+                        <!-- Transaction Quick Notes -->
+                        <div class="mb-6">
+                            <label for="transactionQuickNotes" class="block text-sm font-medium text-slate-300 mb-2">Quick Notes (Optional)</label>
+                            <textarea id="transactionQuickNotes" rows="3"
+                                class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100 resize-none"
+                                placeholder="Add any quick notes about this transaction..."></textarea>
+                        </div>
+
+                        <!-- Transaction Tags Section -->
+                        <div id="transactionTagsSection" class="mb-6"></div>
+
                         <button type="submit" class="w-full bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
                             Add Transaction
                         </button>
@@ -284,6 +351,47 @@
                                 <input type="file" id="importBackupInput" accept=".db,.json" class="hidden">
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Tags Management Section -->
+                    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 mt-6">
+                        <h3 class="text-xl font-bold text-slate-100 mb-6">Manage Transaction Tags</h3>
+
+                        <!-- Add New Tag -->
+                        <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-4 mb-6">
+                            <h4 class="text-lg font-semibold text-slate-100 mb-4">Add New Tag</h4>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-300 mb-2">Tag Name</label>
+                                    <input type="text" id="newTagName" placeholder="e.g., Stop Loss Tests"
+                                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-300 mb-2">Category</label>
+                                    <select id="newTagCategory"
+                                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                        <option value="Pre-Entry">Pre-Entry</option>
+                                        <option value="Entry → Break-Even">Entry → Break-Even</option>
+                                        <option value="W trakcie transakcji">W trakcie transakcji</option>
+                                        <option value="Exit">Exit</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-end gap-3">
+                                    <label class="flex items-center gap-2 text-sm text-slate-300">
+                                        <input type="checkbox" id="newTagAllowMultiple"
+                                            class="w-4 h-4 bg-slate-700 border border-slate-600 rounded focus:ring-2 focus:ring-primary">
+                                        Allow Multiple
+                                    </label>
+                                    <button id="addTagBtn" class="px-6 py-2 bg-primary hover:bg-blue-600 text-white font-medium rounded-lg transition duration-200">
+                                        Add Tag
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tags List -->
+                        <div id="tagsContainer"></div>
                     </div>
                 </section>
 
