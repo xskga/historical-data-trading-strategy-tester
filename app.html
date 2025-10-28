@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
+    <title>Trading Journal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        success: '#10b981',
+                        danger: '#ef4444',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+    <!-- Account Modal -->
+    <div id="accountModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-slate-800 rounded-xl p-8 w-full max-w-md border border-slate-700 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-100">New Account</h2>
+                <button class="close text-slate-400 hover:text-slate-100 text-3xl leading-none">&times;</button>
+            </div>
+            <form id="accountForm" class="space-y-4">
+                <div>
+                    <label for="accountName" class="block text-sm font-medium text-slate-300 mb-2">Account Name</label>
+                    <input type="text" id="accountName" required
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                </div>
+                <div>
+                    <label for="initialBalance" class="block text-sm font-medium text-slate-300 mb-2">Initial Balance ($)</label>
+                    <input type="number" id="initialBalance" step="0.01" required
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                </div>
+                <div>
+                    <label for="leverage" class="block text-sm font-medium text-slate-300 mb-2">Leverage</label>
+                    <input type="number" id="leverage" value="100" required
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                </div>
+                <button type="submit" class="w-full bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                    Create Account
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tag Field Modal -->
+    <div id="tagFieldModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-slate-800 rounded-xl p-8 w-full max-w-2xl border border-slate-700 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-100">Add Field to Tag</h2>
+                <button id="closeTagFieldModal" class="text-slate-400 hover:text-slate-100 text-3xl leading-none">&times;</button>
+            </div>
+            <form id="tagFieldForm" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="fieldName" class="block text-sm font-medium text-slate-300 mb-2">Field Name</label>
+                        <input type="text" id="fieldName" required
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                    </div>
+                    <div>
+                        <label for="fieldType" class="block text-sm font-medium text-slate-300 mb-2">Field Type</label>
+                        <select id="fieldType" required
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                            <option value="number">Number (Integer)</option>
+                            <option value="decimal">Decimal</option>
+                            <option value="boolean">True/False</option>
+                            <option value="select">Dropdown List</option>
+                            <option value="checkbox">Checkbox (Multiple)</option>
+                            <option value="datetime">Date & Time</option>
+                            <option value="text">Text</option>
+                            <option value="textarea">Notes (Textarea)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Options for Select/Checkbox -->
+                <div id="fieldOptionsContainer" class="hidden">
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Options (one per line)</label>
+                    <textarea id="fieldOptions" rows="4"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100 resize-none"
+                        placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-2 text-sm text-slate-300">
+                        <input type="checkbox" id="fieldRequired"
+                            class="w-4 h-4 bg-slate-700 border border-slate-600 rounded focus:ring-2 focus:ring-primary">
+                        Required Field
+                    </label>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button type="submit" class="flex-1 bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                        Add Field
+                    </button>
+                    <button type="button" id="cancelTagFieldBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Transaction Edit Modal -->
+    <div id="transactionEditModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-slate-800 rounded-xl p-8 w-full max-w-6xl border border-slate-700 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-100">View/Edit Transaction</h2>
+                <button id="closeTransactionEditModal" class="text-slate-400 hover:text-slate-100 text-3xl leading-none">&times;</button>
+            </div>
+            <div id="transactionEditContent" class="space-y-6"></div>
+            <div class="flex gap-3 mt-6">
+                <button id="saveTransactionEditBtn" class="flex-1 bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                    Save Changes
+                </button>
+                <button id="cancelTransactionEditBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trading Rules Modal -->
+    <div id="tradingRulesModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-slate-800 rounded-xl p-8 w-full max-w-3xl border border-slate-700 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-100">📋 Trading Rules</h2>
+                <button id="closeTradingRulesModal" class="text-slate-400 hover:text-slate-100 text-3xl leading-none">&times;</button>
+            </div>
+            <div class="mb-6">
+                <p class="text-sm text-slate-400 mb-4">Write down your trading rules to stay disciplined and consistent.</p>
+                <textarea id="tradingRulesText" rows="15"
+                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100 resize-none font-mono"
+                    placeholder="Example:&#10;1. Never risk more than 1% per trade&#10;2. Always set stop loss before entering&#10;3. Only trade during London/NY session&#10;4. Wait for confirmation on all timeframes&#10;5. Take profit at predetermined levels"></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button id="saveTradingRulesBtn" class="flex-1 bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                    Save Rules
+                </button>
+                <button id="cancelTradingRulesBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mistakes Log Modal -->
+    <div id="mistakesLogModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-slate-800 rounded-xl p-8 w-full max-w-3xl border border-slate-700 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-100">⚠️ Mistakes Log</h2>
+                <button id="closeMistakesLogModal" class="text-slate-400 hover:text-slate-100 text-3xl leading-none">&times;</button>
+            </div>
+            <div class="mb-6">
+                <p class="text-sm text-slate-400 mb-4">Document mistakes to avoid repeating them. Learn from your errors.</p>
+                <textarea id="mistakesLogText" rows="15"
+                    class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100 resize-none font-mono"
+                    placeholder="Example:&#10;2025-01-15: Entered without confirmation - Lost $50&#10;2025-01-14: Moved stop loss too early - Got stopped out&#10;2025-01-12: Revenge trading after loss - 3 losing trades&#10;2025-01-10: Ignored risk management - Risked 3% instead of 1%"></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button id="saveMistakesLogBtn" class="flex-1 bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                    Save Log
+                </button>
+                <button id="cancelMistakesLogBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="min-h-screen">
+        <!-- Main Content -->
+        <main class="overflow-y-auto">
+            <div class="max-w-7xl mx-auto p-8 space-y-8">
+
+                <!-- Top Bar with Account Selection -->
+                <div class="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl p-4">
+                    <h1 class="text-2xl font-bold text-slate-100">Trading Journal</h1>
+                    <div class="flex items-center gap-3">
+                        <button id="tradingRulesBtn" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-slate-100 text-sm font-medium transition">
+                            📋 Trading Rules
+                        </button>
+                        <button id="mistakesLogBtn" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-slate-100 text-sm font-medium transition">
+                            ⚠️ Mistakes Log
+                        </button>
+                        <div class="w-px h-8 bg-slate-600"></div>
+                        <select id="accountSelect" class="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-primary outline-none">
+                            <option value="">Select account...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Dashboard Section -->
+                <section id="dashboard">
+                    <h2 class="text-2xl font-bold text-slate-100 mb-6">Dashboard</h2>
+                    <div class="grid grid-cols-4 gap-6">
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-sm font-medium text-slate-400 mb-2">Current Balance</h3>
+                            <p id="currentBalance" class="text-3xl font-bold text-slate-100">$0.00</p>
+                        </div>
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-sm font-medium text-slate-400 mb-2">Total P&L</h3>
+                            <p id="totalPnL" class="text-3xl font-bold">$0.00</p>
+                        </div>
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-sm font-medium text-slate-400 mb-2">Net ROI</h3>
+                            <p id="netROI" class="text-3xl font-bold">0%</p>
+                        </div>
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-sm font-medium text-slate-400 mb-2">Total Trades</h3>
+                            <p id="totalTransactions" class="text-3xl font-bold text-slate-100">0</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Add Transaction Section -->
+                <section id="addTransaction" class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                    <h2 class="text-2xl font-bold text-slate-100 mb-6">Add Transaction</h2>
+                    <form id="addTransactionForm">
+                        <div class="grid grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label for="transactionDate" class="block text-sm font-medium text-slate-300 mb-2">Transaction Date</label>
+                                <input type="date" id="transactionDate" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                            </div>
+                            <div>
+                                <label for="instrument" class="block text-sm font-medium text-slate-300 mb-2">Instrument</label>
+                                <select id="instrument" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                    <option value="">Select instrument...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="strategy" class="block text-sm font-medium text-slate-300 mb-2">Strategy</label>
+                                <select id="strategy" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                    <option value="">Select strategy...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="direction" class="block text-sm font-medium text-slate-300 mb-2">Direction</label>
+                                <select id="direction" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                    <option value="">Select direction...</option>
+                                    <option value="LONG">LONG</option>
+                                    <option value="SHORT">SHORT</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="entryPrice" class="block text-sm font-medium text-slate-300 mb-2">Entry Price</label>
+                                <input type="number" id="entryPrice" step="0.00001" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                            </div>
+                            <div>
+                                <label for="stopLoss" class="block text-sm font-medium text-slate-300 mb-2">Stop Loss</label>
+                                <input type="number" id="stopLoss" step="0.00001" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                            </div>
+                            <div>
+                                <label for="riskPercent" class="block text-sm font-medium text-slate-300 mb-2">Risk (%)</label>
+                                <input type="number" id="riskPercent" step="0.1" min="0.1" max="100" value="1" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                            </div>
+                            <div>
+                                <label for="exitPrice" class="block text-sm font-medium text-slate-300 mb-2">Exit Price</label>
+                                <input type="number" id="exitPrice" step="0.00001" required
+                                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-4 mb-6">
+                            <div class="grid grid-cols-4 gap-4">
+                                <div>
+                                    <p class="text-xs text-slate-400 mb-1">Position Size</p>
+                                    <p id="positionSize" class="text-lg font-bold text-slate-100">$0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 mb-1">Risk ($)</p>
+                                    <p id="riskAmount" class="text-lg font-bold text-slate-100">$0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 mb-1">Risk/Reward Ratio</p>
+                                    <p id="rrRatio" class="text-lg font-bold text-slate-100">0:0</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 mb-1">Potential P&L</p>
+                                    <p id="potentialPnL" class="text-lg font-bold text-slate-100">$0.00</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Transaction Quick Notes -->
+                        <div class="mb-6">
+                            <label for="transactionQuickNotes" class="block text-sm font-medium text-slate-300 mb-2">Quick Notes (Optional)</label>
+                            <textarea id="transactionQuickNotes" rows="3"
+                                class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100 resize-none"
+                                placeholder="Add any quick notes about this transaction..."></textarea>
+                        </div>
+
+                        <!-- Transaction Tags Section -->
+                        <div id="transactionTagsSection" class="mb-6"></div>
+
+                        <button type="submit" class="w-full bg-success hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200">
+                            Add Transaction
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Transaction History Section -->
+                <section id="history" class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-slate-100">Transaction History</h2>
+                        <div class="flex gap-3">
+                            <select id="filterStrategy" class="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-primary outline-none">
+                                <option value="">All strategies</option>
+                            </select>
+                            <select id="filterInstrument" class="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-primary outline-none">
+                                <option value="">All instruments</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-slate-700">
+                                    <th class="sortable text-left py-3 px-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none" data-column="created_at">Date <span class="sort-arrow"></span></th>
+                                    <th class="sortable text-left py-3 px-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none" data-column="instrument">Instrument <span class="sort-arrow"></span></th>
+                                    <th class="sortable text-left py-3 px-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none" data-column="strategy">Strategy <span class="sort-arrow"></span></th>
+                                    <th class="sortable text-left py-3 px-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none" data-column="direction">Direction <span class="sort-arrow"></span></th>
+                                    <th class="sortable text-left py-3 px-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none" data-column="entry_price">Entry <span class="sort-arrow"></span></th>
+                                    <th class="sortable text-left py-3 px-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none" data-column="stop_loss">Stop Loss <span class="sort-arrow"></span></th>
+                                    <th class="sortable text-left py-3 px-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none" data-column="exit_price">Exit <span class="sort-arrow"></span></th>
+                                    <th class="sortable text-left py-3 px-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none" data-column="risk_percent">Risk % <span class="sort-arrow"></span></th>
+                                    <th class="sortable text-left py-3 px-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none" data-column="risk_amount">Risk $ <span class="sort-arrow"></span></th>
+                                    <th class="sortable text-left py-3 px-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none" data-column="rr_ratio">R/R Ratio <span class="sort-arrow"></span></th>
+                                    <th class="sortable text-left py-3 px-4 text-sm font-medium text-slate-400 cursor-pointer hover:text-slate-200 select-none" data-column="pnl">P&L <span class="sort-arrow"></span></th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionTableBody" class="text-slate-300">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div class="flex justify-between items-center mt-4">
+                        <div class="flex items-center gap-3">
+                            <label class="text-sm text-slate-400">Items per page:</label>
+                            <select id="itemsPerPage" class="px-3 py-1 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-primary outline-none">
+                                <option value="10">10</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="prevPage" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                Previous
+                            </button>
+                            <span id="pageInfo" class="text-sm text-slate-400 px-4">Page 1 of 1</span>
+                            <button id="nextPage" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Statistics Section -->
+                <section id="statistics" class="space-y-6">
+                    <h2 class="text-2xl font-bold text-slate-100">Statistics</h2>
+
+                    <div id="strategyStatsContainer" class="grid grid-cols-3 gap-6"></div>
+                </section>
+
+                <!-- Settings Section -->
+                <section id="settings" class="space-y-6">
+                    <h2 class="text-2xl font-bold text-slate-100">Settings</h2>
+
+                    <div class="grid grid-cols-3 gap-6">
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-lg font-bold text-slate-100 mb-4">Manage Strategies</h3>
+                            <div class="flex gap-3 mb-4">
+                                <input type="text" id="newStrategyName" placeholder="Strategy name..."
+                                    class="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                <button id="addStrategyBtn" class="px-6 py-2 bg-primary hover:bg-blue-600 text-white font-medium rounded-lg transition duration-200">
+                                    Add
+                                </button>
+                            </div>
+                            <div id="strategiesList" class="space-y-2"></div>
+                        </div>
+
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-lg font-bold text-slate-100 mb-4">Manage Instruments</h3>
+                            <div class="flex gap-3 mb-4">
+                                <input type="text" id="newInstrumentName" placeholder="Instrument name..."
+                                    class="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                <button id="addInstrumentBtn" class="px-6 py-2 bg-primary hover:bg-blue-600 text-white font-medium rounded-lg transition duration-200">
+                                    Add
+                                </button>
+                            </div>
+                            <div id="instrumentsList" class="space-y-2"></div>
+                        </div>
+
+                        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <h3 class="text-lg font-bold text-slate-100 mb-4">Manage Accounts</h3>
+                            <div id="accountsList" class="space-y-2 mb-4"></div>
+                            <button id="addAccountBtn" class="w-full px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition duration-200">
+                                + Add Account
+                            </button>
+                        </div>
+
+                        <div class="col-span-3 bg-slate-800 border border-slate-700 rounded-xl p-6">
+                            <div class="flex items-center gap-2 mb-4">
+                                <h3 class="text-lg font-bold text-slate-100">Data Backup</h3>
+                                <span class="text-slate-400 cursor-help text-lg" title="⚠️ Data is stored in browser. Clearing cookies/site data DELETES all transactions! Regularly save backup to file to protect your data.">❓</span>
+                            </div>
+                            <div class="flex gap-3">
+                                <button id="exportBackupBtn" class="px-4 py-2 bg-success hover:bg-green-600 text-white text-sm font-medium rounded-lg transition duration-200">
+                                    💾 Save Backup
+                                </button>
+                                <label for="importBackupInput" class="px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition duration-200 cursor-pointer">
+                                    📂 Load Backup
+                                </label>
+                                <input type="file" id="importBackupInput" accept=".db,.json" class="hidden">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tags Section -->
+                <section id="tags" class="space-y-6">
+                    <h2 class="text-2xl font-bold text-slate-100">Tags</h2>
+
+                    <!-- Tags Management Section -->
+                    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+                        <h3 class="text-xl font-bold text-slate-100 mb-6">Manage Transaction Tags</h3>
+
+                        <!-- Add New Tag -->
+                        <div class="bg-slate-700/50 border border-slate-600 rounded-lg p-4 mb-6">
+                            <h4 class="text-lg font-semibold text-slate-100 mb-4">Add New Tag</h4>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-300 mb-2">Tag Name</label>
+                                    <input type="text" id="newTagName" placeholder="e.g., Stop Loss Tests"
+                                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-300 mb-2">Category</label>
+                                    <select id="newTagCategory"
+                                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-slate-100">
+                                        <option value="Pre-Trade Checklist">Pre-Trade Checklist</option>
+                                        <option value="Pre-Entry">Pre-Entry</option>
+                                        <option value="Entry → Break-Even">Entry → Break-Even</option>
+                                        <option value="During Trade">During Trade</option>
+                                        <option value="Exit">Exit</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-end gap-3">
+                                    <label class="flex items-center gap-2 text-sm text-slate-300">
+                                        <input type="checkbox" id="newTagAllowMultiple"
+                                            class="w-4 h-4 bg-slate-700 border border-slate-600 rounded focus:ring-2 focus:ring-primary">
+                                        Allow Multiple
+                                    </label>
+                                    <button id="addTagBtn" class="px-6 py-2 bg-primary hover:bg-blue-600 text-white font-medium rounded-lg transition duration-200">
+                                        Add Tag
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tags List -->
+                        <div id="tagsContainer"></div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <script src="assets/database.js"></script>
+    <script src="assets/app.js"></script>
+</body>
+</html>
